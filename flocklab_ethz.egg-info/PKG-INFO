@@ -1,0 +1,53 @@
+Metadata-Version: 2.1
+Name: flocklab-ethz
+Version: 0.1.0
+Summary: Python support for using FlockLab (flocklab CLI, creating flocklab xml, visualization).
+Home-page: https://flocklab.ethz.ch/
+Author: rtrueb
+Author-email: rtrueb@ethz.ch
+License: UNKNOWN
+Description: # FlockLab Python Support
+        
+        This python package provides support for
+        * Interfacing with FlockLab via a CLI
+        * Creating FlockLab test xml programmatically (Python wrapper)
+        * Visualizing FlockLab test results
+        
+        # Installation
+        
+        Install `python3.6+` and `pip`. Then run (not yet working!):
+        
+        ```sh
+        python -m pip install flocklab
+        ```
+        
+        ### Run the Script ###
+        
+        Use 
+        
+        ```sh
+        python -m flocklab
+        ```
+        
+        or just
+        
+        ```
+        flocklab -h
+        ```
+        
+        ### Development ### 
+        
+        Do not install the Python package from PyPi, but rather clone this repository and run the following from inside the top folder (where `setup.py` is located):
+        
+        ```sh
+        python -m pip install -e .
+        ```
+        
+        You can edit the source files and the module will reflect the changes automatically (`-e` means editable install).
+        
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
