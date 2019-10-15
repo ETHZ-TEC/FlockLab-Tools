@@ -26,11 +26,15 @@ def addLinkedCrosshairs(plots):
                     else { cross.spans.width.computed_location=null }'''
     js_leave = '''cross.spans.height.computed_location=null; cross.spans.width.computed_location=null'''
 
-    figures = plots[:]
+    figures = plots
     for plot in plots:
+        print(plot)
+        plot = plots[plot]
+        print(plot)
         crosshair = CrosshairTool(dimensions = 'height')
         plot.add_tools(crosshair)
         for figure in figures:
+            figure = figures[figure]
             if figure != plot:
                 args = {'cross': crosshair, 'fig': figure}
                 figure.js_on_event('mousemove', CustomJS(args = args, code = js_move))
@@ -75,16 +79,18 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     length = len(nodeData)
     for i, (pin, pinData) in enumerate(nodeData.items()):
         t, v, = trace2series(pinData['t'], pinData['v'])
-        source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
+        # source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
+        source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i, desc=[pin for _ in range(len(t))]))
         # plot areas
-        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin))
+        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin),name=pin)
         p.add_glyph(source, vareaGlyph)
         # plot lines
-        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin))
+        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin),name=pin)
         p.add_glyph(source, lineGlyph)
 
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x'),])
+    # hover.tooltips = OrderedDict([('Time', '@x'),('Time', '@name')])
+    hover.tooltips = OrderedDict([('Time', '@x'),('Name','@desc')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -137,7 +143,8 @@ def plotAll(gpioData, powerData):
     for nodeId, nodeData in gpioData.items():
         p = plotObserverGpio(nodeId, nodeData, pOld=p)
         gpioPlots.update( {nodeId: p} )
-    # addLinkedCrosshairs(gpioPlots)
+    
+    addLinkedCrosshairs(gpioPlots)
 
     # plot power data
     powerPlots = OrderedDict()
@@ -205,6 +212,7 @@ def visualizeFlocklabTrace(resultPath):
 
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
+    actutationPath = os.path.join(resultPath, 'gpioactuation.csv')
     gpioAvailable = False
     powerAvailable = False
 
@@ -212,20 +220,48 @@ def visualizeFlocklabTrace(resultPath):
     if os.path.isfile(gpioPath):
         # Read gpio data csv to pandas dataframe
         gpioDf = pd.read_csv(gpioPath)
-        gpioDf.columns = ['timestamp'] + list(gpioDf.columns[1:])
+        # gpioDf.columns = ['timestamp'] + list(gpioDf.columns[1:])
+        gpioDf.rename(columns={'# timestamp': 'timestamp'},inplace=True)
+
         if len(gpioDf) > 0:
             gpioAvailable = True
     else:
-        print('gpiotracing.csv could be found!')
+        print('gpiotracing.csv could not be found!')
+
+    # figure out which data is available
+    if os.path.isfile(actutationPath):
+        # Read gpio data csv to pandas dataframe
+        actutationDf = pd.read_csv(actutationPath)
+        # actutationDf.columns = ['timestamp'] + list(actutationDf.columns[1:])
+        print(actutationDf.head())
+        actutationDf.rename(columns={'timestamp_executed': 'timestamp'},inplace=True)
+        actutationDf.drop(['# timestamp_planned'], axis=1, inplace=True)
+        if gpioAvailable:
+            gpioDf = pd.concat([gpioDf, actutationDf])
+        elif len(actutationDf) > 0:
+            gpioDf = actutationDf
+            gpioAvailable = True
+        print(gpioDf.head())
+    else:
+        print('gpioactuation.csv could not be found!')
 
     if os.path.isfile(powerPath):
         # Read power data csv to pandas dataframe
         powerDf = pd.read_csv(powerPath)
-        powerDf.columns = ['timestamp'] + list(powerDf.columns[1:])
+        powerDf.rename(columns={'# timestamp': 'timestamp'},inplace=True)
         if len(powerDf) > 0:
             powerAvailable = True
     else:
-        print('powerprofiling.csv could be found!')
+        print('powerprofiling.csv could not be found!')
+
+    # if os.path.isfile(sigPath):
+    #     # Read power data csv to pandas dataframe
+    #     sigDf = pd.read_csv(powerPath)
+    #     sigDf.columns = ['timestamp'] + list(sigDf.columns[1:])
+    #     if len(sigDf) > 0:
+    #         powerAvailable = True
+    # else:
+    #     print('gpioactuation.csv could be found!')
 
     # determine first timestamp (globally)
     minT = None
@@ -275,6 +311,22 @@ def visualizeFlocklabTrace(resultPath):
             trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
             powerData.update({nodeId: trace})
 
+
+    # # prepare sig data
+    # sigData = OrderedDict()
+    # if sigAvailable:
+    #     sigDf['timestampRelative'] = sigDf.timestamp - minT
+    #     sigDf.sort_values(by=['node_id', 'timestamp'], inplace=True)
+
+    #     # Get overview of available data
+    #     powerNodeList = sorted(list(set(sigDf.node_id)))
+    #     print('powerNodeList:', powerNodeList)
+
+    #     # Generate gpioData dict from pandas dataframe
+    #     for nodeId, nodeGrp in sigDf.groupby('node_id'):
+    #         print(nodeId)
+    #         trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
+    #         powerData.update({nodeId: trace})
 
     output_file(os.path.join(os.getcwd(), "out.html"))
     plotAll(gpioData, powerData)
