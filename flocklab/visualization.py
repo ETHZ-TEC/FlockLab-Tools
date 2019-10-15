@@ -86,7 +86,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         # source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
         source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i, desc=[pin for _ in range(len(t))]))
         # plot areas
-        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin),name=pin, tags=['foo', 10])
+        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin),name=pin)
         varea = p.add_glyph(source, vareaGlyph)
         vareas += [(pin,[varea])]
 
@@ -94,16 +94,12 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.2),name=pin)
         x = p.add_glyph(source, lineGlyph)
 
-    print(vareas)
     legend = Legend(items=vareas, location="center")
-    # legend = Legend(items=[
-    # ("sin(x)"   , [x]),
-    # ], location="center")
     p.add_layout(legend, 'right')
 
     hover = p.select(dict(type=HoverTool))
     # hover.tooltips = OrderedDict([('Time', '@x'),('Time', '@name')])
-    hover.tooltips = OrderedDict([('Time', '@x'),('Name','@desc'),('Glyphname','$name')])
+    hover.tooltips = OrderedDict([('Time', '@x'),('Name','@desc')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
