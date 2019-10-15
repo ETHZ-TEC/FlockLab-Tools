@@ -10,7 +10,7 @@ from bokeh.plotting import figure, show, output_file
 from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column
-
+from bokeh.models import Legend
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 
 
@@ -80,16 +80,26 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         sizing_mode='stretch_both', # full screen)
     )
     length = len(nodeData)
+    vareas = []
     for i, (pin, pinData) in enumerate(nodeData.items()):
         t, v, = trace2series(pinData['t'], pinData['v'])
         # source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
         source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i, desc=[pin for _ in range(len(t))]))
         # plot areas
         vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin),name=pin, tags=['foo', 10])
-        p.add_glyph(source, vareaGlyph)
+        varea = p.add_glyph(source, vareaGlyph)
+        vareas += [(pin,[varea])]
+
         # plot lines
-        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.1),name=pin)
-        p.add_glyph(source, lineGlyph)
+        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.2),name=pin)
+        x = p.add_glyph(source, lineGlyph)
+
+    print(vareas)
+    legend = Legend(items=vareas, location="center")
+    # legend = Legend(items=[
+    # ("sin(x)"   , [x]),
+    # ], location="center")
+    p.add_layout(legend, 'right')
 
     hover = p.select(dict(type=HoverTool))
     # hover.tooltips = OrderedDict([('Time', '@x'),('Time', '@name')])
