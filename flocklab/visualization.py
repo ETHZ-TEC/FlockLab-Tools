@@ -21,10 +21,11 @@ def addLinkedCrosshairs(plots):
     js_move = '''   start = fig.x_range.start, end = fig.x_range.end
                     if(cb_obj.x>=start && cb_obj.x<=end && cb_obj.y>=start && cb_obj.y<=end)
                         { cross.spans.height.computed_location=cb_obj.sx }
-                    else { cross.spans.height.computed_location = null }
-                    if(cb_obj.y>=start && cb_obj.y<=end && cb_obj.x>=start && cb_obj.x<=end)
-                        { cross.spans.width.computed_location=cb_obj.sy  }
-                    else { cross.spans.width.computed_location=null }'''
+                    else { cross.spans.height.computed_location = null }'''
+                    # if(cb_obj.y>=start && cb_obj.y<=end && cb_obj.x>=start && cb_obj.x<=end)
+                    #     { cross.spans.width.computed_location=cb_obj.sy  }
+                    # else { cross.spans.width.computed_location=null }
+                    # '''
     js_leave = '''cross.spans.height.computed_location=null; cross.spans.width.computed_location=null'''
 
     figures = plots
@@ -186,7 +187,8 @@ def plotAll(gpioData, powerData):
         p = plotObserverGpio(nodeId, nodeData, pOld=p)
 
         # adding a start and end line
-        p.renderers.extend([vline_start,vline_end])
+        p.add_layout(vline_start)
+        p.add_layout(vline_end)
 
         gpioPlots.update( {nodeId: p} )
     
@@ -198,7 +200,8 @@ def plotAll(gpioData, powerData):
         p = plotObserverPower(nodeId, nodeData, pOld=p)
 
         # adding a start and end line
-        p.renderers.extend([vline_start,vline_end])
+        p.add_layout(vline_start)
+        p.add_layout(vline_end)
 
         powerPlots.update( {nodeId: p} )
 
