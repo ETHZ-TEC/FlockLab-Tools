@@ -9,8 +9,8 @@ import os
 from bokeh.plotting import figure, show, output_file
 from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
-from bokeh.layouts import gridplot, row, column 
-  
+from bokeh.layouts import gridplot, row, column
+
 
 
 
@@ -56,15 +56,15 @@ def trace2series(t, v):
     vInv = [0 if e==1.0 else 1 for e in v]
     # interleave
     vNew = np.vstack((vInv, v)).reshape((-1,),order='F')
-    
+
     return (tNew, vNew)
 
 def plotObserverGpio(nodeId, nodeData, pOld):
     colors = ['blue', 'red', 'green', 'orange']
     p = figure(
-        title=None, 
+        title=None,
         x_range=pOld.x_range if pOld is not None else None,
-        plot_width=1200, 
+        plot_width=1200,
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
@@ -79,27 +79,27 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         # plot areas
         vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin))
         p.add_glyph(source, vareaGlyph)
-#        # plot lines
-#        lineGlyph = Line(x="x", y="y2", line_color='black')
-#        p.add_glyph(source, lineGlyph)
-        
+        # plot lines
+        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin))
+        p.add_glyph(source, lineGlyph)
+
     hover = p.select(dict(type=HoverTool))
     hover.tooltips = OrderedDict([('Time', '@x'),])
-        
+
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
     p.xaxis.visible = False
     p.yaxis.visible = False
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
-    
+
     return p
 
 def plotObserverPower(nodeId, nodeData, pOld):
     p = figure(
-        title=None, 
+        title=None,
         x_range=pOld.x_range if pOld is not None else None,
-        plot_width=1200, 
+        plot_width=1200,
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
@@ -109,17 +109,17 @@ def plotObserverPower(nodeId, nodeData, pOld):
     )
     source = ColumnDataSource(dict(x=nodeData['t'], y=nodeData['v']))
     lineGlyph = Line(x="x", y="y", line_color='black')
-    p.add_glyph(source, lineGlyph) 
+    p.add_glyph(source, lineGlyph)
     hover = p.select(dict(type=HoverTool))
     hover.tooltips = OrderedDict([('Time', '@x'),('Current', '@y')])
-        
+
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
     p.xaxis.visible = False
 #    p.yaxis.visible = False
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
-    
+
     return p
 
 def plotAll(gpioData, powerData):
@@ -130,7 +130,7 @@ def plotAll(gpioData, powerData):
             pinMax = pinData['t'].max()
             if pinMax > maxT:
                 maxT = pinMax
-    
+
     # plot gpio data
     gpioPlots = OrderedDict()
     p = None
@@ -138,20 +138,20 @@ def plotAll(gpioData, powerData):
         p = plotObserverGpio(nodeId, nodeData, pOld=p)
         gpioPlots.update( {nodeId: p} )
     # addLinkedCrosshairs(gpioPlots)
-        
+
     # plot power data
     powerPlots = OrderedDict()
     p = list(gpioPlots.values())[-1]
     for nodeId, nodeData in powerData.items():
         p = plotObserverPower(nodeId, nodeData, pOld=p)
         powerPlots.update( {nodeId: p} )
-        
+
     # create linked dummy plot to get shared x axis without scaling height of bottom most plot
     allPlots = list(gpioPlots.values())
     pTime = figure(
-        title=None, 
+        title=None,
         x_range=allPlots[-1].x_range,
-        plot_width=1200, 
+        plot_width=1200,
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
@@ -165,7 +165,7 @@ def plotAll(gpioData, powerData):
     pTime.xgrid.grid_line_color = None
     pTime.ygrid.grid_line_color = None
     pTime.yaxis.visible = False
-    
+
     # arrange all plots in grid
     gridPlots = []
     print(gpioPlots.keys())
@@ -184,15 +184,15 @@ def plotAll(gpioData, powerData):
             raise Exception("ERROR!")
         gridPlots.append([labelDiv, col])
     gridPlots.append([None, pTime])
-    
+
     # stack all plots
-    grid = gridplot(gridPlots,  
-                    merge_tools=True, 
+    grid = gridplot(gridPlots,
+                    merge_tools=True,
                     sizing_mode='scale_both',
-#                    plot_width=1200, 
+#                    plot_width=1200,
 #                    plot_height=900,
                     )
-    
+
     # render all plots
     show(grid)
 
@@ -202,12 +202,12 @@ def visualizeFlocklabTrace(resultPath):
     # check for correct path
     if os.path.isfile(resultPath):
         resultPath = os.path.dirname(resultPath)
-    
+
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
     gpioAvailable = False
     powerAvailable = False
-    
+
     # figure out which data is available
     if os.path.isfile(gpioPath):
         # Read gpio data csv to pandas dataframe
@@ -217,7 +217,7 @@ def visualizeFlocklabTrace(resultPath):
             gpioAvailable = True
     else:
         print('gpiotracing.csv could be found!')
-        
+
     if os.path.isfile(powerPath):
         # Read power data csv to pandas dataframe
         powerDf = pd.read_csv(powerPath)
@@ -226,7 +226,7 @@ def visualizeFlocklabTrace(resultPath):
             powerAvailable = True
     else:
         print('powerprofiling.csv could be found!')
-    
+
     # determine first timestamp (globally)
     minT = None
     if gpioAvailable and powerAvailable:
@@ -235,19 +235,19 @@ def visualizeFlocklabTrace(resultPath):
         minT = np.min(gpioDf.timestamp)
     elif powerAvailable:
         minT = np.min(powerDf.timestamp)
-        
+
     # prepare gpio data
     gpioData = OrderedDict()
     if gpioAvailable:
         gpioDf['timestampRelative'] = gpioDf.timestamp - minT
         gpioDf.sort_values(by=['node_id', 'pin_name', 'timestamp'], inplace=True)
-    
+
         # Get overview of available data
         gpioNodeList = sorted(list(set(gpioDf.node_id)))
         gpioPinList = sorted(list(set(gpioDf.pin_name)))
         print('gpioNodeList:', gpioNodeList)
         print('gpioPinList:', gpioPinList)
-        
+
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in gpioDf.groupby('node_id'):
             print(nodeId)
@@ -257,33 +257,32 @@ def visualizeFlocklabTrace(resultPath):
                 trace = {'t': pinGrp.timestampRelative.to_numpy(), 'v': pinGrp.value.to_numpy()}
                 nodeData.update({pin: trace})
             gpioData.update({nodeId: nodeData})
-    
-    
+
+
     # prepare power data
     powerData = OrderedDict()
     if powerAvailable:
         powerDf['timestampRelative'] = powerDf.timestamp - minT
         powerDf.sort_values(by=['node_id', 'timestamp'], inplace=True)
-    
+
         # Get overview of available data
         powerNodeList = sorted(list(set(powerDf.node_id)))
         print('powerNodeList:', powerNodeList)
-        
+
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
             print(nodeId)
             trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
             powerData.update({nodeId: trace})
-    
 
-    
+
+    output_file(os.path.join(os.getcwd(), "out.html"))
     plotAll(gpioData, powerData)
-    
 
 
 ###############################################################################
 
 if __name__ == "__main__":
     output_file("out.html")
-    
+
     visualizeFlocklabTrace(path)
