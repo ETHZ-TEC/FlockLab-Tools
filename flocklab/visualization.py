@@ -97,6 +97,9 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     legend = Legend(items=vareas, location="center")
     p.add_layout(legend, 'right')
 
+    # legend = Legend(items=[(f'Node {nodeId}',[])], location="center")
+    # p.add_layout(legend, 'left')
+
     hover = p.select(dict(type=HoverTool))
     # hover.tooltips = OrderedDict([('Time', '@x'),('Time', '@name')])
     hover.tooltips = OrderedDict([('Time', '@x'),('Name','@desc')])
@@ -104,7 +107,24 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
     p.xaxis.visible = False
-    p.yaxis.visible = False
+    p.yaxis.visible = True
+
+
+    p.xaxis.major_tick_line_color = None  # turn off x-axis major ticks
+    p.xaxis.minor_tick_line_color = None  # turn off x-axis minor ticks
+
+    p.yaxis.major_tick_line_color = None  # turn off y-axis major ticks
+    p.yaxis.minor_tick_line_color = None  # turn off y-axis minor ticks
+
+    p.xaxis.major_label_text_font_size = '0pt'  # turn off x-axis tick labels
+    p.yaxis.major_label_text_font_size = '0pt'  # turn off y-axis tick labels
+    # p.xaxis.axis_label = "GPIO Traces"
+    # p.xaxis.axis_label_text_color = "#aa6666"
+    # p.xaxis.axis_label_standoff = 30
+
+    p.yaxis.axis_label = f"Node {nodeId}\n GPIO Traces"
+    p.yaxis.axis_label_text_font_style = "italic"
+
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
 
@@ -134,6 +154,9 @@ def plotObserverPower(nodeId, nodeData, pOld):
 #    p.yaxis.visible = False
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
+
+    p.yaxis.axis_label = f"Node {nodeId}\n Power Traces"
+    p.yaxis.axis_label_text_font_style = "italic"
 
     return p
 
@@ -190,7 +213,7 @@ def plotAll(gpioData, powerData):
     print(powerPlots.keys())
     allNodeIds = sorted(list(set(gpioPlots.keys()).union(set(powerPlots.keys()))))
     for nodeId in allNodeIds:
-        labelDiv = column(Div(text='{}'.format(nodeId), style={'float': 'right'}), sizing_mode='fixed')
+        # labelDiv = column(Div(text='{}'.format(nodeId), style={'float': 'right'}), sizing_mode='fixed')
         print(len(powerPlots))
         if (nodeId in gpioPlots) and (nodeId in powerPlots):
             col = column(gpioPlots[nodeId], powerPlots[nodeId])
@@ -200,8 +223,10 @@ def plotAll(gpioData, powerData):
             col = column(powerPlots[nodeId])
         else:
             raise Exception("ERROR!")
-        gridPlots.append([labelDiv, col])
-    gridPlots.append([None, pTime])
+        # gridPlots.append([labelDiv, col])
+        gridPlots.append([col])
+    gridPlots.append([pTime])
+    # gridPlots.append([None, pTime])
 
     # stack all plots
     grid = gridplot(gridPlots,
