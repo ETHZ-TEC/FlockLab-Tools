@@ -10,7 +10,7 @@ from bokeh.plotting import figure, show, output_file
 from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column
-from bokeh.models import Legend
+from bokeh.models import Legend, Span
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 
 
@@ -163,17 +163,31 @@ def plotObserverPower(nodeId, nodeData, pOld):
 def plotAll(gpioData, powerData):
     # determine max timestamp value
     maxT = 0
+    minT = np.inf
     for nodeData in gpioData.values():
         for pinData in nodeData.values():
             pinMax = pinData['t'].max()
+            pinMin = pinData['t'].min()
             if pinMax > maxT:
                 maxT = pinMax
+            if pinMin < minT:
+                minT = pinMin
+
+
+
+    
+    vline_start = Span(location=minT, dimension='height', line_color=(0.1,0.1,0.1,0.1), line_width=3)
+    vline_end = Span(location=maxT, dimension='height', line_color=(0.1,0.1,0.1,0.1), line_width=3)
 
     # plot gpio data
     gpioPlots = OrderedDict()
     p = None
     for nodeId, nodeData in gpioData.items():
         p = plotObserverGpio(nodeId, nodeData, pOld=p)
+
+        # adding a start and end line
+        p.renderers.extend([vline_start,vline_end])
+
         gpioPlots.update( {nodeId: p} )
     
 
@@ -182,6 +196,10 @@ def plotAll(gpioData, powerData):
     p = list(gpioPlots.values())[-1]
     for nodeId, nodeData in powerData.items():
         p = plotObserverPower(nodeId, nodeData, pOld=p)
+
+        # adding a start and end line
+        p.renderers.extend([vline_start,vline_end])
+
         powerPlots.update( {nodeId: p} )
 
     # mergedPlots = powerPlots
@@ -225,7 +243,7 @@ def plotAll(gpioData, powerData):
             raise Exception("ERROR!")
         # gridPlots.append([labelDiv, col])
         gridPlots.append([col])
-    gridPlots.append([pTime])
+    # gridPlots.append([pTime])
     # gridPlots.append([None, pTime])
 
     # stack all plots
