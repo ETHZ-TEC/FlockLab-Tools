@@ -11,6 +11,7 @@ from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column
 
+from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 
 
 
@@ -27,30 +28,32 @@ def addLinkedCrosshairs(plots):
     js_leave = '''cross.spans.height.computed_location=null; cross.spans.width.computed_location=null'''
 
     figures = plots
-    for plot in plots:
-        print(plot)
-        plot = plots[plot]
-        print(plot)
-        crosshair = CrosshairTool(dimensions = 'height')
-        plot.add_tools(crosshair)
-        for figure in figures:
-            figure = figures[figure]
-            if figure != plot:
-                args = {'cross': crosshair, 'fig': figure}
-                figure.js_on_event('mousemove', CustomJS(args = args, code = js_move))
-                figure.js_on_event('mouseleave', CustomJS(args = args, code = js_leave))
+    for x in plots:
+        for plot in x:
+            print(plot)
+            plot = x[plot]
+            print(plot)
+            crosshair = CrosshairTool(dimensions = 'height')
+            plot.add_tools(crosshair)
+            for y in figures:
+                for figure in y:
+                    figure = y[figure]
+                    if figure != plot:
+                        args = {'cross': crosshair, 'fig': figure}
+                        figure.js_on_event('mousemove', CustomJS(args = args, code = js_move))
+                        figure.js_on_event('mouseleave', CustomJS(args = args, code = js_leave))
 
 
 
 def colorMapping(pin):
-    if pin == 'LED1': return 'red'
-    elif pin == 'LED2': return 'green'
-    elif pin == 'LED3': return 'blue'
-    elif pin == 'INT1': return 'orange'
-    elif pin == 'INT2': return 'lightskyblue'
-    elif pin == 'SIG1': return 'lightyellow'
-    elif pin == 'SIG2': return 'mediumpurple'
-    else: return 'grey'
+    if pin == 'LED1': return red
+    elif pin == 'LED2': return green
+    elif pin == 'LED3': return blue
+    elif pin == 'INT1': return orange
+    elif pin == 'INT2': return lightskyblue
+    elif pin == 'SIG1': return mediumspringgreen
+    elif pin == 'SIG2': return mediumpurple
+    else: return grey
 
 def trace2series(t, v):
 #    t = [e[0] for e in trace]
@@ -68,7 +71,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     p = figure(
         title=None,
         x_range=pOld.x_range if pOld is not None else None,
-        plot_width=1200,
+        # plot_width=1200,
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
@@ -82,15 +85,15 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         # source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
         source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i, desc=[pin for _ in range(len(t))]))
         # plot areas
-        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin),name=pin)
+        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin),name=pin, tags=['foo', 10])
         p.add_glyph(source, vareaGlyph)
         # plot lines
-        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin),name=pin)
+        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.1),name=pin)
         p.add_glyph(source, lineGlyph)
 
     hover = p.select(dict(type=HoverTool))
     # hover.tooltips = OrderedDict([('Time', '@x'),('Time', '@name')])
-    hover.tooltips = OrderedDict([('Time', '@x'),('Name','@desc')])
+    hover.tooltips = OrderedDict([('Time', '@x'),('Name','@desc'),('Glyphname','$name')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -105,7 +108,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
     p = figure(
         title=None,
         x_range=pOld.x_range if pOld is not None else None,
-        plot_width=1200,
+        # plot_width=1200,
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
@@ -144,7 +147,6 @@ def plotAll(gpioData, powerData):
         p = plotObserverGpio(nodeId, nodeData, pOld=p)
         gpioPlots.update( {nodeId: p} )
     
-    addLinkedCrosshairs(gpioPlots)
 
     # plot power data
     powerPlots = OrderedDict()
@@ -153,13 +155,16 @@ def plotAll(gpioData, powerData):
         p = plotObserverPower(nodeId, nodeData, pOld=p)
         powerPlots.update( {nodeId: p} )
 
+    # mergedPlots = powerPlots
+    addLinkedCrosshairs([gpioPlots, powerPlots])
+
     # create linked dummy plot to get shared x axis without scaling height of bottom most plot
     allPlots = list(gpioPlots.values())
     pTime = figure(
         title=None,
         x_range=allPlots[-1].x_range,
-        plot_width=1200,
-        plot_height=900,
+        # plot_width=1200,
+        plot_height=50,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
         active_drag='xbox_zoom',
