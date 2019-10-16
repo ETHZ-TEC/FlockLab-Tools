@@ -98,12 +98,9 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     legend = Legend(items=vareas, location="center")
     p.add_layout(legend, 'right')
 
-    # legend = Legend(items=[(f'Node {nodeId}',[])], location="center")
-    # p.add_layout(legend, 'left')
 
     hover = p.select(dict(type=HoverTool))
-    # hover.tooltips = OrderedDict([('Time', '@x'),('Time', '@name')])
-    hover.tooltips = OrderedDict([('Time', '@x'),('Name','@desc')])
+    hover.tooltips = OrderedDict([('Time', '@x s'),('Name','@desc')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -147,7 +144,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
     lineGlyph = Line(x="x", y="y", line_color='black')
     p.add_glyph(source, lineGlyph)
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x'),('Current', '@y')])
+    hover.tooltips = OrderedDict([('Time', '@x s'),('Current', '@y mA')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -156,7 +153,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
 
-    p.yaxis.axis_label = f"Node {nodeId}\n Power Traces"
+    p.yaxis.axis_label = f"Node {nodeId}\n Current [mA]"
     p.yaxis.axis_label_text_font_style = "italic"
 
     return p
@@ -175,8 +172,6 @@ def plotAll(gpioData, powerData):
                 minT = pinMin
 
 
-
-    
     vline_start = Span(location=minT, dimension='height', line_color=(0.1,0.1,0.1,0.1), line_width=3)
     vline_end = Span(location=maxT, dimension='height', line_color=(0.1,0.1,0.1,0.1), line_width=3)
 
@@ -204,7 +199,7 @@ def plotAll(gpioData, powerData):
         p.add_layout(vline_end)
 
         powerPlots.update( {nodeId: p} )
-
+    p.xaxis.visible = True
     # mergedPlots = powerPlots
     addLinkedCrosshairs([gpioPlots, powerPlots])
 
