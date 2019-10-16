@@ -420,7 +420,7 @@ class Flocklab:
         <port>serial</port>
         <baudrate>115200</baudrate>
         <mode>ascii</mode>
-        <remoteIp>82.130.103.248</remoteIp>
+        <remoteIp>0.0.0.0</remoteIp>
     </serialConf>
     '''
 

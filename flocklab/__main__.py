@@ -24,10 +24,10 @@ def main():
     parser.add_argument('-a', '--abort', metavar='<testid>', help='abort test')
     parser.add_argument('-d', '--delete', metavar='<testid>', help='delete test')
     parser.add_argument('-g', '--get', metavar='<testid>', help='get test results (via https)')
-    parser.add_argument('-f', '--fetch', metavar='<testid>', help='fetch test results (via webdav)')
+    parser.add_argument('-f', '--fetch', metavar='<testid>', help='fetch test results (via webdav) [NOT IMPLEMENTED YET!]')
     parser.add_argument('-o', '--observers', metavar='<platform>', help='get a list of the currently available (online) observers')
     parser.add_argument('-p', '--platforms', help='get a list of the available platforms', action='store_true', default=False)
-    parser.add_argument('-x', '--xml', metavar='<image.elf>', help='Generate FlockLab xml config')
+    parser.add_argument('-x', '--xml', metavar='<image.elf>', help='Generate FlockLab xml config [NOT FULLY IMPLEMENTED YET!]')
     parser.add_argument('--power', action='store_true', default=False, help='Enable power profiling (for FlockLab xml config generation)')
     parser.add_argument('-z', '--visualize', metavar='<result directory>', help='Visualize FlockLab result data')
 
