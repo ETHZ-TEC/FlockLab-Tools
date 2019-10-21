@@ -32,8 +32,7 @@ def main():
 
     args = parser.parse_args()
     # assertions
-    if args.power:
-        assert args.xml is not None
+    # (none)
 
     if args.validate is not None:
         print(Flocklab.xmlValidate(args.validate))

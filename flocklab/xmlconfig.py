@@ -26,7 +26,8 @@ class FlocklabXmlConfig():
     '''
 
     def __init__(self):
-        self.configList = []
+        self.generalConf = GeneralConf()
+        self.configList = [self.generalConf]
 
     def generateXml(self, xmlPath):
         '''Generate FlockLab xml config for runnnig a test on FlockLab. Output file is written to 'out.xml'.
@@ -77,12 +78,6 @@ class GeneralConf():
     <scheduleAsap>
         <durationSecs>{duration}</durationSecs>
     </scheduleAsap>
-
-    <!--<scheduleAbsolute>-->
-        <!--<start>2019-02-06T01:00:00Z</start>-->
-        <!--<end>2019-02-06T01:20:00Z</end>-->
-    <!--</scheduleAbsolute>-->
-
     <emailResults>no</emailResults>
     </generalConf>
     '''
@@ -249,7 +244,7 @@ class PowerProfilingConf():
                 <offsetMicrosecs>0</offsetMicrosecs>
             </relativeTime>
             <samplingDivider>56</samplingDivider>
-        </profConfabort>
+        </profConf>
     </powerProfilingConf>
     '''
 
