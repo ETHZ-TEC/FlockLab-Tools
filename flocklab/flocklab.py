@@ -11,7 +11,7 @@ import tarfile
 from collections import OrderedDict
 import numpy as np
 import pandas as pd
-
+import appdirs
 
 ################################################################################
 
@@ -25,7 +25,7 @@ class Flocklab:
             Username & Password
         '''
         # get username and pw from config file
-        flConfigPath = os.path.expanduser('~/.flocklabauth')
+        flConfigPath = os.path.join(appdirs.AppDirs("flocklab_tools", "flocklab_tools").user_config_dir,'.flocklabauth')
         try:
             with open(flConfigPath, "r") as configFile:
                 text = configFile.read()
@@ -33,7 +33,9 @@ class Flocklab:
                 password = re.search(r'PASSWORD=(.+)', text).group(1)
                 return {'username': username, 'password': password}
         except:
-            print("Failed to read flocklab auth info from ~/.flocklabauth! See https://gitlab.ethz.ch/tec/public/flocklab/wikis/flocklab-cli#setting-it-up for info!")
+            print("Failed to read flocklab auth info from %s \n"
+                  "Please create the file and provide at least one line with USER=your_username and one line with PASSWORD=your_password \n"
+                  "See https://gitlab.ethz.ch/tec/public/flocklab/wikis/flocklab-cli#setting-it-up for more info!"%flConfigPath)
 
     @staticmethod
     def formatObsIds(obsList):

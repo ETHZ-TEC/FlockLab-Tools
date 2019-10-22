@@ -22,6 +22,7 @@ setuptools.setup(
         'pandas',
         'bokeh',
         'requests',
+        'appdirs',
     ],
     classifiers=(
         "Programming Language :: Python :: 3",
