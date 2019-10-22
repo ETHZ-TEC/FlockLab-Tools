@@ -1,3 +1,0 @@
-[console_scripts]
-flocklab = flocklab.__main__:main
-
