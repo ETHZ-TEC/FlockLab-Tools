@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 
 setuptools.setup(
-    name='flocklab-ethz',
+    name='flocklab_tools',
     python_requires='>=3.6',
     version='0.1.0',
     author='rtrueb',

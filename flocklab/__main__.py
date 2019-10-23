@@ -11,6 +11,7 @@ import tarfile
 from collections import OrderedDict
 import numpy as np
 import pandas as pd
+import appdirs
 
 from .visualization import visualizeFlocklabTrace
 from .flocklab import Flocklab
@@ -18,7 +19,10 @@ from .flocklab import Flocklab
 
 ################################################################################
 def main():
-    parser = argparse.ArgumentParser(description='FlockLab CLI')
+    description = '''FlockLab CLI
+    Default config file location: {}
+    '''.format(os.path.join(appdirs.AppDirs("flocklab_tools", "flocklab_tools").user_config_dir,'.flocklabauth'))
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-v', '--validate', metavar='<testconfig.xml>', help='validate test config')
     parser.add_argument('-c', '--create', metavar='<testconfig.xml>', help='create / schedule new test')
     parser.add_argument('-a', '--abort', metavar='<testid>', help='abort test')
