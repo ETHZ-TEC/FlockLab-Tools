@@ -12,6 +12,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 import appdirs
+from getpass import getpass
 
 ################################################################################
 
@@ -26,6 +27,27 @@ class Flocklab:
         '''
         # get username and pw from config file
         flConfigPath = os.path.join(appdirs.AppDirs("flocklab_tools", "flocklab_tools").user_config_dir,'.flocklabauth')
+        flConfigDir = os.path.dirname(flConfigPath)
+        # check if flocklab auth file exists
+        if not os.path.exists(flConfigPath):
+            print('The required FlockLab authentication file ({}) is not available!'.format(flConfigPath))
+            # offer user to create flocklab auth file
+            inp = input("Would you like to create the .flocklabauth file? [y/N]: ")
+            if inp == 'y':
+                # check if config folder exists & create it if necessary
+                if not os.path.exists(flConfigDir):
+                    os.makedirs(flConfigDir)
+                usr = input("Username: ")
+                pwd = getpass(prompt='Password: ', stream=None)
+                # Test whether credentials are working
+                if Flocklab.getPlatforms(username=usr, password=pwd) is not None:
+                    with open(flConfigPath, 'w') as f:
+                        f.write('USER={}\n'.format(usr))
+                        f.write('PASSWORD={}\n'.format(pwd))
+                    print("FlockLab authentication file successfully created!")
+                else:
+                    print("WARNING: FlockLab authentication information seems wrong. No .flocklabauth file created!")
+
         try:
             with open(flConfigPath, "r") as configFile:
                 text = configFile.read()
@@ -90,7 +112,8 @@ class Flocklab:
                 return 'The file validated correctly.'
             else:
                 return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to contact the FlockLab API!")
 
     @staticmethod
@@ -118,7 +141,8 @@ class Flocklab:
                 return ret.group(1)
             else:
                 return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to contact the FlockLab API!")
 
     @staticmethod
@@ -144,7 +168,8 @@ class Flocklab:
                 return reg.group(1)
             else:
                 return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to contact the FlockLab API!")
 
     @staticmethod
@@ -170,7 +195,8 @@ class Flocklab:
                 return reg.group(1)
             else:
                 return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to contact the FlockLab API!")
 
     @staticmethod
@@ -207,7 +233,8 @@ class Flocklab:
                     return 'Successfully downloaded & extracted: flocklab_testresults_{}.tar.gz & {}'.format(testId, testId)
             else:
                 return 'Downloading testresults failed (status code: {})'.format(req.status_code)
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to contact the FlockLab API!")
 
     @staticmethod
@@ -232,18 +259,23 @@ class Flocklab:
             obsList = json.loads(req.text)["output"].split(' ')
             obsList = [int(e) for e in obsList]
             return obsList
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to fetch active observers from FlockLab API!")
 
     @staticmethod
-    def getPlatforms():
+    def getPlatforms(username=None, password=None):
         '''Get currently available observer IDs (depends on user role!)
         Args:
-            platform: Flocklab platform
+            username: FlockLab username (useful for testing flocklab authentication info)
+            password: Flocklab password (useful for testing flocklab authentication info)
         Returns:
-            List of accessible FlockLab observer IDs
+            List of available platforms on FlockLab
         '''
-        creds = Flocklab.getCredentials()
+        if username is None or password is None:
+            creds = Flocklab.getCredentials()
+        else:
+            creds = {'username': username, 'password': password}
 
         # get observer list from server
         try:
@@ -255,8 +287,10 @@ class Flocklab:
             req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'api.php'), files=files)
             platformList = json.loads(req.text)["output"].split(' ')
             return platformList
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to fetch active observers from FlockLab API!")
+            return None
 
 
 
