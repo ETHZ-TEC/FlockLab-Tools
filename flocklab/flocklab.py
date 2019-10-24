@@ -17,7 +17,7 @@ from getpass import getpass
 ################################################################################
 
 class Flocklab:
-    flocklabServerBase = 'https://www.flocklab.ethz.ch/user'
+    flocklabServerBase = 'https://www.flocklab.ethz.ch/user/'
 
     @staticmethod
     def getCredentials():
@@ -107,7 +107,7 @@ class Flocklab:
                 'first': (None, 'no'),
                 'xmlfile': (os.path.basename(xmlPath), open(xmlPath, 'rb').read(), 'text/xml', {}),
             }
-            req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'xmlvalidate.php'), files=files)
+            req = requests.post(Flocklab.flocklabServerBase + 'xmlvalidate.php', files=files)
             if '<p>The file validated correctly.</p>' in req.text:
                 return 'The file validated correctly.'
             else:
@@ -133,7 +133,7 @@ class Flocklab:
                 'first': (None, 'no'),
                 'xmlfile': (os.path.basename(xmlPath), open(xmlPath, 'rb').read(), 'text/xml', {}),
             }
-            req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'newtest.php'), files=files)
+            req = requests.post(Flocklab.flocklabServerBase + 'newtest.php', files=files)
             # FIXME: success is not correctly detected
             ret = re.search('<!-- cmd --><p>(Test (Id [0-9]*) successfully added.)</p>', req.text)
             if ret is not None:
@@ -162,7 +162,7 @@ class Flocklab:
                 'removeit': (None, 'Remove test'),
                 'testid': (None, '{}'.format(testId)),
             }
-            req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'test_abort.php'), files=files)
+            req = requests.post(Flocklab.flocklabServerBase + 'test_abort.php', files=files)
             reg = re.search('<!-- cmd --><p>(The test has been aborted.)</p><!-- cmd -->', req.text)
             if reg is not None:
                 return reg.group(1)
@@ -189,7 +189,7 @@ class Flocklab:
                 'removeit': (None, 'Remove test'),
                 'testid': (None, '{}'.format(testId)),
             }
-            req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'test_delete.php'), files=files)
+            req = requests.post(Flocklab.flocklabServerBase + 'test_delete.php', files=files)
             reg = re.search('<!-- cmd --><p>(The test has been removed.)</p><!-- cmd -->', req.text)
             if reg is not None:
                 return reg.group(1)
@@ -220,7 +220,7 @@ class Flocklab:
                   'username': creds['username'],
                   'password': creds['password']
             }
-            req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'result_download_archive.php'), headers=headers, data=data)
+            req = requests.post(Flocklab.flocklabServerBase + 'result_download_archive.php', headers=headers, data=data)
             if req.status_code == 200:
                 if '"error"' in req.text:
                     output = json.loads(req.text)["output"]
@@ -255,7 +255,7 @@ class Flocklab:
                 'q': (None, 'obs'),
                 'platform': (None, platform),
             }
-            req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'api.php'), files=files)
+            req = requests.post(Flocklab.flocklabServerBase + 'api.php', files=files)
             obsList = json.loads(req.text)["output"].split(' ')
             obsList = [int(e) for e in obsList]
             return obsList
@@ -284,7 +284,7 @@ class Flocklab:
                 'password': (None, creds['password']),
                 'q': (None, 'platform'),
             }
-            req = requests.post(os.path.join(Flocklab.flocklabServerBase, 'api.php'), files=files)
+            req = requests.post(Flocklab.flocklabServerBase + 'api.php', files=files)
             platformList = json.loads(req.text)["output"].split(' ')
             return platformList
         except Exception as e:
