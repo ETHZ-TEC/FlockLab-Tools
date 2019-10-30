@@ -52,10 +52,10 @@ You can edit the source files and the module will reflect the changes automatica
 Install `python3.6+` and `pip`. Then run:
 
 ```sh
-python -m pip install flocklab_tools
+python -m pip install flocklab-tools
 ```
 
 ## Uninstall
 ```python
-python3 -m pip uninstall flocklab_tools
+python3 -m pip uninstall flocklab-tools
 ```
