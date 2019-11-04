@@ -16,6 +16,18 @@ from getpass import getpass
 
 ################################################################################
 
+
+class FlocklabError(Exception):
+    """Exception raised for errors from flocklab
+
+    Attributes:
+        message -- explanation of the error
+    """
+
+    def __init__(self,  message):
+        self.message = message
+
+
 class Flocklab:
     flocklabServerBase = 'https://www.flocklab.ethz.ch/user/'
 
@@ -224,7 +236,7 @@ class Flocklab:
             if req.status_code == 200:
                 if '"error"' in req.text:
                     output = json.loads(req.text)["output"]
-                    return 'Failed: {}'.format(output)
+                    raise FlocklabError('Failed: {}'.format(output))
                 else:
                     with open('flocklab_testresults_{}.tar.gz'.format(testId), 'wb') as f:
                         f.write(req.content)
@@ -232,8 +244,8 @@ class Flocklab:
                         tar.extractall()
                     return 'Successfully downloaded & extracted: flocklab_testresults_{}.tar.gz & {}'.format(testId, testId)
             else:
-                return 'Downloading testresults failed (status code: {})'.format(req.status_code)
-        except Exception as e:
+                raise FlocklabError('Downloading testresults failed (status code: {})'.format(req.status_code))
+        except requests.exceptions.RequestException as e:
             print(e)
             print("Failed to contact the FlockLab API!")
 
@@ -295,7 +307,7 @@ class Flocklab:
 
 
     @staticmethod
-    def serial2Df(serialPath, error='replace'):
+    def serial2Df(serialPath, error='replace', serialFilename='serial.csv'):
         '''Read a serial trace from a flocklab test result and convert it to a pandas dataframe.
         Args:
             serialPath: path to serial trace result file (or flocklab result directory)
@@ -303,11 +315,14 @@ class Flocklab:
             serial log as pandas dataframe
         '''
         if os.path.isdir(serialPath):
-            serialPath = os.path.join(serialPath, 'serial.csv')
+            serialFilename = os.path.join(serialPath, serialFilename)
+        else:
+            raise RuntimeError('The provided path is not valid: %s'%serialPath)
 
-        assert os.path.isfile(serialPath)
+        if not os.path.isfile(serialFilename):
+            raise RuntimeError('The file not exist : %s'%serialFilename)
 
-        with open(serialPath, 'r', encoding='utf-8', errors='replace') as f:
+        with open(serialFilename, 'r', encoding='utf-8', errors='replace') as f:
             ll = []
             for line in f.readlines():
                 if line[0] == '#': # special processing of header
