@@ -124,11 +124,6 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     # p.yaxis.axis_label = f"Node {nodeId}\n GPIO Traces"
     # p.yaxis.axis_label_text_font_style = "italic"
 
-#    p.yaxis.axis_label_orientation = "horizontal" # not working!
-    from math import pi
-    p.yaxis.major_label_orientation = pi/4
-    p.yaxis.major_label_text_color = "red"
-
     return p
 
 def plotObserverPower(nodeId, nodeData, pOld):
