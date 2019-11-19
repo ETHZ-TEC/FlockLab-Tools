@@ -32,7 +32,6 @@ class FlocklabXmlConfig():
     def generateXml(self, xmlPath):
         '''Generate FlockLab xml config for runnnig a test on FlockLab. Output file is written to 'out.xml'.
         Args:
-            imagePath: path to image binary which should be included into the xml
             xmlPath: path to file where xml config is written to
         Returns:
             (-)

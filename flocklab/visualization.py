@@ -9,7 +9,7 @@ import os
 from bokeh.plotting import figure, show, output_file
 from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
-from bokeh.layouts import gridplot, row, column
+from bokeh.layouts import gridplot, row, column, layout, Spacer
 from bokeh.models import Legend, Span
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 
@@ -31,9 +31,9 @@ def addLinkedCrosshairs(plots):
     figures = plots
     for x in plots:
         for plot in x:
-            print(plot)
+            # print(plot)
             plot = x[plot]
-            print(plot)
+            # print(plot)
             crosshair = CrosshairTool(dimensions = 'height')
             plot.add_tools(crosshair)
             for y in figures:
@@ -75,7 +75,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         # plot_width=1200,
         plot_height=900,
         min_border=0,
-        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
         active_drag='xbox_zoom',
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen)
@@ -120,11 +120,14 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     # p.xaxis.axis_label_text_color = "#aa6666"
     # p.xaxis.axis_label_standoff = 30
 
-    p.yaxis.axis_label = f"Node {nodeId}\n GPIO Traces"
-    p.yaxis.axis_label_text_font_style = "italic"
+    # p.yaxis.axis_label = f"{nodeId}"
+    # p.yaxis.axis_label = f"Node {nodeId}\n GPIO Traces"
+    # p.yaxis.axis_label_text_font_style = "italic"
 
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
-#    p.axis.major_label_orientation = 'vertical'
+    from math import pi
+    p.yaxis.major_label_orientation = pi/4
+    p.yaxis.major_label_text_color = "red"
 
     return p
 
@@ -135,7 +138,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
         # plot_width=1200,
         plot_height=900,
         min_border=0,
-        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
         active_drag='xbox_zoom',
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen)
@@ -153,12 +156,12 @@ def plotObserverPower(nodeId, nodeData, pOld):
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
 
-    p.yaxis.axis_label = f"Node {nodeId}\n Current [mA]"
-    p.yaxis.axis_label_text_font_style = "italic"
+    # p.yaxis.axis_label = f"Node {nodeId}\n Current [mA]"
+    # p.yaxis.axis_label_text_font_style = "italic"
 
     return p
 
-def plotAll(gpioData, powerData):
+def plotAll(gpioData, powerData, testNum):
     # determine max timestamp value
     maxT = 0
     minT = np.inf
@@ -186,7 +189,7 @@ def plotAll(gpioData, powerData):
         p.add_layout(vline_end)
 
         gpioPlots.update( {nodeId: p} )
-    
+
 
     # plot power data
     powerPlots = OrderedDict()
@@ -211,7 +214,7 @@ def plotAll(gpioData, powerData):
         # plot_width=1200,
         plot_height=50,
         min_border=0,
-        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset', 'hover'],
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
         active_drag='xbox_zoom',
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen)
@@ -225,35 +228,66 @@ def plotAll(gpioData, powerData):
 
     # arrange all plots in grid
     gridPlots = []
-    print(gpioPlots.keys())
-    print(powerPlots.keys())
+    # print(gpioPlots.keys())
+    # print(powerPlots.keys())
     allNodeIds = sorted(list(set(gpioPlots.keys()).union(set(powerPlots.keys()))))
     for nodeId in allNodeIds:
-        # labelDiv = column(Div(text='{}'.format(nodeId), style={'float': 'right'}), sizing_mode='fixed')
-        print(len(powerPlots))
+        labelDiv = Div(
+            # text='<div style="display: table-cell; vertical-align: middle", height="100%""><b>{}</b></div>'.format(nodeId),
+            text='<b>{}</b>'.format(nodeId),
+            style={
+                'background-color': 'lightblue',
+                'width': '30px',
+                'height': '100%',
+                'text-align': 'center',
+            },
+            # sizing_mode='stretch_both',
+            align='center',
+            width=30,
+            width_policy='fixed',
+        )
+        spacer = Spacer(
+            height_policy='fixed',
+            height=10,
+        )
+        # print(len(powerPlots))
         if (nodeId in gpioPlots) and (nodeId in powerPlots):
-            col = column(gpioPlots[nodeId], powerPlots[nodeId])
+            colList = [gpioPlots[nodeId], powerPlots[nodeId]]
         elif (nodeId in gpioPlots):
-            col = column(gpioPlots[nodeId])
+            colList = [gpioPlots[nodeId]]
         elif (nodeId in powerPlots):
-            col = column(powerPlots[nodeId])
+            colList = [powerPlots[nodeId]]
         else:
-            raise Exception("ERROR!")
-        # gridPlots.append([labelDiv, col])
-        gridPlots.append([col])
-    # gridPlots.append([pTime])
-    # gridPlots.append([None, pTime])
+            raise Exception("ERROR: No plot for {nodeId} available, even though nodeId is present!".format(nodeId=nodeId))
+        plotCol = column(colList, sizing_mode='stretch_both')
+        # plotCol = column(colList + [spacer], sizing_mode='stretch_both')
+        # labelCol = column([labelDiv, spacer], sizing_mode='fixed')
+        gridPlots.append([labelDiv, plotCol])
 
     # stack all plots
-    grid = gridplot(gridPlots,
-                    merge_tools=True,
-                    sizing_mode='scale_both',
-#                    plot_width=1200,
-#                    plot_height=900,
-                    )
+    grid = gridplot(
+        gridPlots,
+        merge_tools=True,
+        # sizing_mode='stretch_both',
+        sizing_mode='scale_both',
+    )
+    # Add title
+    titleDiv = Div(
+        text='<h2>FlockLab Results - Test {testNum}</h2>'.format(testNum=testNum),
+        style={},
+        height_policy='fit',
+        width_policy='fit',
+        align='center'
+    )
+    # put together final layout of page
+    finalLayout = column(
+        [titleDiv, grid],
+        # [grid],
+        sizing_mode='scale_both',
+    )
 
     # render all plots
-    show(grid)
+    show(finalLayout)
 
 
 
@@ -261,6 +295,9 @@ def visualizeFlocklabTrace(resultPath):
     # check for correct path
     if os.path.isfile(resultPath):
         resultPath = os.path.dirname(resultPath)
+
+    resultPath = os.path.normpath(resultPath) # remove trailing slash if there is one
+    testNum = os.path.basename(resultPath)
 
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
@@ -285,7 +322,7 @@ def visualizeFlocklabTrace(resultPath):
         # Read gpio data csv to pandas dataframe
         actutationDf = pd.read_csv(actutationPath)
         # actutationDf.columns = ['timestamp'] + list(actutationDf.columns[1:])
-        print(actutationDf.head())
+        # print(actutationDf.head())
         actutationDf.rename(columns={'timestamp_executed': 'timestamp'},inplace=True)
         actutationDf.drop(['# timestamp_planned'], axis=1, inplace=True)
         if gpioAvailable:
@@ -293,7 +330,7 @@ def visualizeFlocklabTrace(resultPath):
         elif len(actutationDf) > 0:
             gpioDf = actutationDf
             gpioAvailable = True
-        print(gpioDf.head())
+        # print(gpioDf.head())
     else:
         print('gpioactuation.csv could not be found!')
 
@@ -333,15 +370,15 @@ def visualizeFlocklabTrace(resultPath):
         # Get overview of available data
         gpioNodeList = sorted(list(set(gpioDf.node_id)))
         gpioPinList = sorted(list(set(gpioDf.pin_name)))
-        print('gpioNodeList:', gpioNodeList)
-        print('gpioPinList:', gpioPinList)
+        # print('gpioNodeList:', gpioNodeList)
+        # print('gpioPinList:', gpioPinList)
 
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in gpioDf.groupby('node_id'):
-            print(nodeId)
+            # print(nodeId)
             nodeData = OrderedDict()
             for pin, pinGrp in nodeGrp.groupby('pin_name'):
-                print('  {}'.format(pin))
+                # print('  {}'.format(pin))
                 trace = {'t': pinGrp.timestampRelative.to_numpy(), 'v': pinGrp.value.to_numpy()}
                 nodeData.update({pin: trace})
             gpioData.update({nodeId: nodeData})
@@ -355,11 +392,11 @@ def visualizeFlocklabTrace(resultPath):
 
         # Get overview of available data
         powerNodeList = sorted(list(set(powerDf.node_id)))
-        print('powerNodeList:', powerNodeList)
+        # print('powerNodeList:', powerNodeList)
 
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
-            print(nodeId)
+            # print(nodeId)
             trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
             powerData.update({nodeId: trace})
 
@@ -381,7 +418,7 @@ def visualizeFlocklabTrace(resultPath):
     #         powerData.update({nodeId: trace})
 
     output_file(os.path.join(os.getcwd(), "out.html"))
-    plotAll(gpioData, powerData)
+    plotAll(gpioData, powerData, testNum=testNum)
 
 
 ###############################################################################
