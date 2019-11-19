@@ -11,7 +11,7 @@ setuptools.setup(
     version='0.1.0',
     author='rtrueb',
     author_email='rtrueb@ethz.ch',
-    description='Python support for using FlockLab (flocklab CLI, creating flocklab xml, visualization).',
+    description='Python support for using the FlockLab testbed (flocklab CLI, creating flocklab xml, visualization).',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='https://flocklab.ethz.ch/',
