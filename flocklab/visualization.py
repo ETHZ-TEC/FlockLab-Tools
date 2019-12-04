@@ -292,7 +292,7 @@ def visualizeFlocklabTrace(resultPath):
         resultPath = os.path.dirname(resultPath)
 
     resultPath = os.path.normpath(resultPath) # remove trailing slash if there is one
-    testNum = os.path.basename(resultPath)
+    testNum = os.path.basename(os.path.abspath(resultPath))
 
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
