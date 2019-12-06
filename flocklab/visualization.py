@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-(C) 2019, ETH Zurich
+Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
 """
 
 import numpy as np

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
+"""
 
 from .flocklab import Flocklab
 from .visualization import visualizeFlocklabTrace

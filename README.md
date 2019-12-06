@@ -104,8 +104,10 @@ python -m pip install -e .
 
 You can edit the source files and the module will reflect the changes automatically (the `-e` option which means _editable install_).
 
-## License
+## License & Copyright
 Licensed under the term of MIT License (MIT). See file [LICENSE](LICENSE).
+
+Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
 
 ## List of Contributors
 * Roman Trub
