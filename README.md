@@ -8,6 +8,9 @@ Features:
 * Programmatic creation of FlockLab test xml files (in python)
 * Visualization of FlockLab test results
 
+[PyPi Webpage](https://pypi.org/project/flocklab-tools/)  
+[Source Code](https://gitlab.ethz.ch/tec/public/flocklab/flocklab-tools)
+
 ## Installation
 
 Dependencies:
