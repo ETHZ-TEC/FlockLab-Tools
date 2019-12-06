@@ -13,7 +13,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name='flocklab-tools',
     python_requires='>=3.6',
-    version='0.1.0',
+    version='0.1.1',
     author='Computer Engineering Group, ETH Zurich',
     author_email='rtrueb@ethz.ch',
     description='Python support for using the FlockLab testbed (flocklab CLI, creating flocklab xml, visualization).',
