@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+(C) 2019, ETH Zurich
+"""
 
 import numpy as np
 import pandas as pd
@@ -57,15 +60,26 @@ def colorMapping(pin):
     else: return grey
 
 def trace2series(t, v):
-#    t = [e[0] for e in trace]
-#    v = [e[1] for e in trace]
     tNew = np.repeat(t, 2, axis=0)
     # repeat invert and interleave
     vInv = [0 if e==1.0 else 1 for e in v]
     # interleave
     vNew = np.vstack((vInv, v)).reshape((-1,),order='F')
 
-    return (tNew, vNew)
+    # insert gaps (np.nan) where signal is LOW (to prevent long unnecessary lines in plots)
+    tNewNew = []
+    vNewNew = []
+    assert len(tNew) == len(vNew)
+    for i in range(len(tNew)-1):
+        tNewNew.append(tNew[i])
+        vNewNew.append(vNew[i])
+        if (vNew[i] == 0 and vNew[i+1] == 0):
+            tNewNew.append(tNew[i])
+            vNewNew.append(np.nan)
+    tNewNew = np.asarray(tNewNew)
+    vNewNew = np.asarray(vNewNew)
+
+    return (tNewNew, vNewNew)
 
 def plotObserverGpio(nodeId, nodeData, pOld):
     colors = ['blue', 'red', 'green', 'orange']
@@ -83,24 +97,24 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     length = len(nodeData)
     vareas = []
     for i, (pin, pinData) in enumerate(nodeData.items()):
+        signalName = '{} (Node {})'.format(pin, nodeId)
         t, v, = trace2series(pinData['t'], pinData['v'])
-        # source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
-        source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i, desc=[pin for _ in range(len(t))]))
+        source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
         # plot areas
-        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin),name=pin)
-        varea = p.add_glyph(source, vareaGlyph)
+        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin))
+        varea = p.add_glyph(source, vareaGlyph, name=signalName)
         vareas += [(pin,[varea])]
 
-        # plot lines
-        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.2),name=pin)
-        x = p.add_glyph(source, lineGlyph)
+        # plot lines (necessary for tooltip/hover and for visibility if zoomed out!)
+        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.2))
+        x = p.add_glyph(source, lineGlyph, name=signalName)
 
     legend = Legend(items=vareas, location="center")
     p.add_layout(legend, 'right')
 
 
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x s'),('Name','@desc')])
+    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Signal','$name')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -140,9 +154,9 @@ def plotObserverPower(nodeId, nodeData, pOld):
     )
     source = ColumnDataSource(dict(x=nodeData['t'], y=nodeData['v']))
     lineGlyph = Line(x="x", y="y", line_color='black')
-    p.add_glyph(source, lineGlyph)
+    p.add_glyph(source, lineGlyph, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x s'),('Current', '@y mA')])
+    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Current', '@y mA'),('Node','$name')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -268,7 +282,7 @@ def plotAll(gpioData, powerData, testNum):
     )
     # Add title
     titleDiv = Div(
-        text='<h2>FlockLab Results - Test {testNum}</h2>'.format(testNum=testNum),
+        text='<h2 style="margin:0">FlockLab Results - Test {testNum}</h2>'.format(testNum=testNum),
         style={},
         height_policy='fit',
         width_policy='fit',
@@ -412,7 +426,7 @@ def visualizeFlocklabTrace(resultPath):
     #         trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
     #         powerData.update({nodeId: trace})
 
-    output_file(os.path.join(os.getcwd(), "out.html"))
+    output_file(os.path.join(os.getcwd(), "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
     plotAll(gpioData, powerData, testNum=testNum)
 
 

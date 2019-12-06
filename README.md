@@ -1,6 +1,8 @@
 # FlockLab Tools
 
-This python package provides:
+This Python package provides tools for working with the [FlockLab testbed](https://flocklab.ethz.ch/). 
+
+Features:
 * Python API for managing FlockLab tests
 * Command-line interface (CLI) for Interfacing with FlockLab
 * Programmatic creation of FlockLab test xml files (in python)
@@ -15,6 +17,10 @@ Dependencies:
 Install with
 ```sh
 python -m pip install flocklab-tools
+```
+or
+```sh
+pip install flocklab-tools
 ```
 
 ## Uninstall
@@ -33,7 +39,7 @@ flocklab -h
 
 Alternative (using the python module):
 ```sh
-python3 -m flocklab -h
+python -m flocklab -h
 ```
 
 #### Command Line Options:
@@ -97,3 +103,11 @@ python -m pip install -e .
 ```
 
 You can edit the source files and the module will reflect the changes automatically (the `-e` option which means _editable install_).
+
+## License
+Licensed under the term of MIT License (MIT). See file [LICENSE](LICENSE).
+
+## List of Contributors
+* Roman Trub
+* Matthias Meyer
+* Reto Da Forno
