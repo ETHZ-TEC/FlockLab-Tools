@@ -406,7 +406,7 @@ def visualizeFlocklabTrace(resultPath):
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
             # print(nodeId)
-            trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
+            trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['I1'].to_numpy()}
             powerData.update({nodeId: trace})
 
 

@@ -32,7 +32,13 @@ class FlocklabError(Exception):
 
 
 class Flocklab:
-    flocklabServerBase = 'https://www.flocklab.ethz.ch/user/'
+    def __init__(self):
+        # self.apiBaseAddr = 'https://www.flocklab.ethz.ch/user/'
+        self.apiBaseAddr = 'https://flocklab-dev-server.ethz.ch/'
+        self.sslVerify = False
+
+    def setApiBaseAddr(self, addr):
+        self.apiBaseAddr = addr
 
     @staticmethod
     def getCredentials():
@@ -105,8 +111,7 @@ class Flocklab:
         except FileNotFoundError:
             print("Failed to read and convert image!")
 
-    @staticmethod
-    def xmlValidate(xmlPath):
+    def xmlValidate(self, xmlPath):
         '''Validate FlockLab config xml by using the web api
         Args:
             xmlPath: path to FlockLab config xml file
@@ -122,7 +127,7 @@ class Flocklab:
                 'first': (None, 'no'),
                 'xmlfile': (os.path.basename(xmlPath), open(xmlPath, 'rb').read(), 'text/xml', {}),
             }
-            req = requests.post(Flocklab.flocklabServerBase + 'xmlvalidate.php', files=files)
+            req = requests.post(self.apiBaseAddr + 'xmlvalidate.php', files=files, verify=self.sslVerify)
             if '<p>The file validated correctly.</p>' in req.text:
                 return 'The file validated correctly.'
             else:
@@ -131,8 +136,7 @@ class Flocklab:
             print(e)
             print("Failed to contact the FlockLab API!")
 
-    @staticmethod
-    def createTest(xmlPath):
+    def createTest(self, xmlPath):
         '''Create a FlockLab test by using the web api
         Args:
             xmlPath: path to FlockLab config xml file
@@ -148,7 +152,7 @@ class Flocklab:
                 'first': (None, 'no'),
                 'xmlfile': (os.path.basename(xmlPath), open(xmlPath, 'rb').read(), 'text/xml', {}),
             }
-            req = requests.post(Flocklab.flocklabServerBase + 'newtest.php', files=files)
+            req = requests.post(self.apiBaseAddr + 'newtest.php', files=files, verify=self.sslVerify)
             # FIXME: success is not correctly detected
             ret = re.search('<!-- cmd --><p>(Test (Id [0-9]*) successfully added.)</p>', req.text)
             if ret is not None:
@@ -160,8 +164,7 @@ class Flocklab:
             print(e)
             print("Failed to contact the FlockLab API!")
 
-    @staticmethod
-    def abortTest(testId):
+    def abortTest(self, testId):
         '''Abort a FlockLab test if it is running.
         Args:
             testId: ID of the test which should be aborted
@@ -177,7 +180,7 @@ class Flocklab:
                 'removeit': (None, 'Remove test'),
                 'testid': (None, '{}'.format(testId)),
             }
-            req = requests.post(Flocklab.flocklabServerBase + 'test_abort.php', files=files)
+            req = requests.post(self.apiBaseAddr + 'test_abort.php', files=files, verify=self.sslVerify)
             reg = re.search('<!-- cmd --><p>(The test has been aborted.)</p><!-- cmd -->', req.text)
             if reg is not None:
                 return reg.group(1)
@@ -187,8 +190,7 @@ class Flocklab:
             print(e)
             print("Failed to contact the FlockLab API!")
 
-    @staticmethod
-    def deleteTest(testId):
+    def deleteTest(self, testId):
         '''Delete a FlockLab test.
         Args:
             testId: ID of the test which should be delted
@@ -204,7 +206,7 @@ class Flocklab:
                 'removeit': (None, 'Remove test'),
                 'testid': (None, '{}'.format(testId)),
             }
-            req = requests.post(Flocklab.flocklabServerBase + 'test_delete.php', files=files)
+            req = requests.post(self.apiBaseAddr + 'test_delete.php', files=files, verify=self.sslVerify)
             reg = re.search('<!-- cmd --><p>(The test has been removed.)</p><!-- cmd -->', req.text)
             if reg is not None:
                 return reg.group(1)
@@ -214,8 +216,7 @@ class Flocklab:
             print(e)
             print("Failed to contact the FlockLab API!")
 
-    @staticmethod
-    def getResults(testId):
+    def getResults(self, testId):
         '''Download FlockLab test results via https.
         Args:
             testId: ID of the test which should be downloaded
@@ -235,7 +236,7 @@ class Flocklab:
                   'username': creds['username'],
                   'password': creds['password']
             }
-            req = requests.post(Flocklab.flocklabServerBase + 'result_download_archive.php', headers=headers, data=data)
+            req = requests.post(self.apiBaseAddr + 'result_download_archive.php', headers=headers, data=data, verify=self.sslVerify)
             if req.status_code == 200:
                 if '"error"' in req.text:
                     output = json.loads(req.text)["output"]
@@ -252,8 +253,7 @@ class Flocklab:
             print(e)
             print("Failed to contact the FlockLab API!")
 
-    @staticmethod
-    def getObsIds(platform='dpp2lora'):
+    def getObsIds(self, platform='dpp2lora'):
         '''Get currently available observer IDs (depends on user role!)
         Args:
             platform: Flocklab platform
@@ -270,7 +270,7 @@ class Flocklab:
                 'q': (None, 'obs'),
                 'platform': (None, platform),
             }
-            req = requests.post(Flocklab.flocklabServerBase + 'api.php', files=files)
+            req = requests.post(self.apiBaseAddr + 'api.php', files=files, verify=self.sslVerify)
             obsList = json.loads(req.text)["output"].split(' ')
             obsList = [int(e) for e in obsList]
             return obsList
@@ -278,8 +278,7 @@ class Flocklab:
             print(e)
             print("Failed to fetch active observers from FlockLab API!")
 
-    @staticmethod
-    def getPlatforms(username=None, password=None):
+    def getPlatforms(self, username=None, password=None):
         '''Get currently available observer IDs (depends on user role!)
         Args:
             username: FlockLab username (useful for testing flocklab authentication info)
@@ -299,7 +298,7 @@ class Flocklab:
                 'password': (None, creds['password']),
                 'q': (None, 'platform'),
             }
-            req = requests.post(Flocklab.flocklabServerBase + 'api.php', files=files)
+            req = requests.post(self.apiBaseAddr + 'api.php', files=files, verify=self.sslVerify)
             platformList = json.loads(req.text)["output"].split(' ')
             return platformList
         except Exception as e:
