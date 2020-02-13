@@ -152,11 +152,30 @@ def plotObserverPower(nodeId, nodeData, pOld):
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen)
     )
-    source = ColumnDataSource(dict(x=nodeData['t'], y=nodeData['v']))
-    lineGlyph = Line(x="x", y="y", line_color='black')
-    p.add_glyph(source, lineGlyph, name='{}'.format(nodeId))
+    source = ColumnDataSource(dict(
+      t=nodeData['t'],
+      i1=nodeData['i1'],
+      v1=nodeData['v1'],
+      v2=nodeData['v2'],
+      p=(nodeData['v2'] - nodeData['v1'])*nodeData['i1']
+    ))
+    # line_i1 = Line(x="t", y="i1", line_color='blue')
+    # line_v1 = Line(x="t", y="v1", line_color='red')
+    # line_v2 = Line(x="t", y="v2", line_color='orange')
+    line_p = Line(x="t", y="p", line_color='black')
+    # p.add_glyph(source, line_i1, name='{}'.format(nodeId))
+    # p.add_glyph(source, line_v1, name='{}'.format(nodeId))
+    # p.add_glyph(source, line_v2, name='{}'.format(nodeId))
+    p.add_glyph(source, line_p, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Current', '@y{0.000} A'),('Node','$name')])
+    hover.tooltips = OrderedDict([
+      ('Time', '@t{0.000000} s'),
+      ('V1', '@v1{0.000000} V'),
+      ('V2', '@v2{0.000000} V'),
+      ('I', '@i1{0.000000} A'),
+      ('Power', '@p{0.000000} W'),
+      ('Node','$name'),
+    ])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -379,7 +398,12 @@ def visualizeFlocklabTrace(resultPath):
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
             # print(nodeId)
-            trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['I1'].to_numpy()}
+            trace = {
+              't': nodeGrp.timestampRelative.to_numpy(),
+              'i1': nodeGrp['I1'].to_numpy(),
+              'v1': nodeGrp['V1'].to_numpy(),
+              'v2': nodeGrp['V2'].to_numpy(),
+            }
             powerData.update({nodeId: trace})
 
 
