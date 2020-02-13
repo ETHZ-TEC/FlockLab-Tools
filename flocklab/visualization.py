@@ -156,12 +156,12 @@ def plotObserverPower(nodeId, nodeData, pOld):
     lineGlyph = Line(x="x", y="y", line_color='black')
     p.add_glyph(source, lineGlyph, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Current', '@y mA'),('Node','$name')])
+    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Current', '@y{0.000} A'),('Node','$name')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
     p.xaxis.visible = False
-#    p.yaxis.visible = False
+    p.yaxis.visible = False
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
 
@@ -310,7 +310,6 @@ def visualizeFlocklabTrace(resultPath):
 
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
-    actutationPath = os.path.join(resultPath, 'gpioactuation.csv')
     gpioAvailable = False
     powerAvailable = False
 
@@ -326,23 +325,6 @@ def visualizeFlocklabTrace(resultPath):
     else:
         print('gpiotracing.csv could not be found!')
 
-    # figure out which data is available
-    if os.path.isfile(actutationPath):
-        # Read gpio data csv to pandas dataframe
-        actutationDf = pd.read_csv(actutationPath)
-        # actutationDf.columns = ['timestamp'] + list(actutationDf.columns[1:])
-        # print(actutationDf.head())
-        actutationDf.rename(columns={'timestamp_executed': 'timestamp'},inplace=True)
-        actutationDf.drop(['# timestamp_planned'], axis=1, inplace=True)
-        if gpioAvailable:
-            gpioDf = pd.concat([gpioDf, actutationDf])
-        elif len(actutationDf) > 0:
-            gpioDf = actutationDf
-            gpioAvailable = True
-        # print(gpioDf.head())
-    else:
-        print('gpioactuation.csv could not be found!')
-
     if os.path.isfile(powerPath):
         # Read power data csv to pandas dataframe
         powerDf = pd.read_csv(powerPath)
@@ -351,15 +333,6 @@ def visualizeFlocklabTrace(resultPath):
             powerAvailable = True
     else:
         print('powerprofiling.csv could not be found!')
-
-    # if os.path.isfile(sigPath):
-    #     # Read power data csv to pandas dataframe
-    #     sigDf = pd.read_csv(powerPath)
-    #     sigDf.columns = ['timestamp'] + list(sigDf.columns[1:])
-    #     if len(sigDf) > 0:
-    #         powerAvailable = True
-    # else:
-    #     print('gpioactuation.csv could be found!')
 
     # determine first timestamp (globally)
     minT = None
