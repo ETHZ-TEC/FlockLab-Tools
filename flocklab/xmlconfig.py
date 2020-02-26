@@ -77,6 +77,7 @@ class GeneralConf():
     <generalConf>
     <name>{name}</name>
     <description>{description}</description>
+    <custom>{custom}</custom>
     <scheduleAsap>
         <durationSecs>{duration}</durationSecs>
     </scheduleAsap>
@@ -88,6 +89,7 @@ class GeneralConf():
         self.name = None
         self.description = None
         self.duration = None
+        self.custom = ''
 
     def config2Str(self):
         assert self.name is not None
@@ -96,7 +98,8 @@ class GeneralConf():
         return GeneralConf.generalConf.format(
             name=self.name,
             description=self.description,
-            duration=self.duration
+            duration=self.duration,
+            custom=self.custom,
         )
 
 class TargetConf():
@@ -123,7 +126,7 @@ class TargetConf():
         return TargetConf.targetConf.format(
             obsIds=Flocklab.formatObsIds(self.obsIds),
             imageId=self.imageId,
-            voltage=self.voltage
+            voltage=self.voltage,
         )
 
 class GpioTracingConf():
@@ -218,34 +221,36 @@ class SerialConf():
         <port>serial</port>
         <baudrate>115200</baudrate>
         <mode>ascii</mode>
-        <remoteIp>0.0.0.0</remoteIp>
+        <remoteIp>{remoteIp}</remoteIp>
     </serialConf>
     '''
 
     def __init__(self):
         self.obsIds = None
+        self.remoteIp = None
 
     def config2Str(self):
         assert self.obsIds is not None
+        # remote IP is optional
+        if self.remoteIp is None:
+            self.remoteIp = '0.0.0.0'
         return SerialConf.serialConf.format(
             obsIds=Flocklab.formatObsIds(self.obsIds),
+            remoteIp=self.remoteIp,
         )
 
 
 class PowerProfilingConf():
-    # obsIds, duration
+    # obsIds, duration, samplingRate
     powerProfilingConf = \
     '''
     <!-- Power Profiling Service configuration -->
     <powerProfilingConf>
         <obsIds>{obsIds}</obsIds>
         <profConf>
-            <durationMillisecs>{duration}</durationMillisecs>
-            <relativeTime>
-                <offsetSecs>0</offsetSecs>
-                <offsetMicrosecs>0</offsetMicrosecs>
-            </relativeTime>
-            <samplingDivider>56</samplingDivider>
+            <duration>{duration}</duration>
+            <offset>{offset}</offset>
+            <samplingRate>{samplingRate}</samplingRate>
         </profConf>
     </powerProfilingConf>
     '''
@@ -253,13 +258,19 @@ class PowerProfilingConf():
     def __init__(self):
         self.obsIds = None
         self.duration = None
+        self.offset = 0
+        self.samplingRate = None
 
     def config2Str(self):
         assert self.obsIds is not None
         assert self.duration is not None
+        assert self.offset is not None
+        assert self.samplingRate is not None
         return PowerProfilingConf.powerProfilingConf.format(
             obsIds=Flocklab.formatObsIds(self.obsIds),
-            duration=self.duration*1000, # convert seconds to milliseconds
+            duration=self.duration, # convert seconds to milliseconds
+            offset=self.offset,
+            samplingRate=self.samplingRate,
         )
 
 class ImageConf():

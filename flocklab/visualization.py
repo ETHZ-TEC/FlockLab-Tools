@@ -15,7 +15,7 @@ from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column, layout, Spacer
 from bokeh.models import Legend, Span
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
-
+from bokeh.events import DoubleTap
 
 
 ###############################################################################
@@ -90,9 +90,9 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
-        active_drag='xbox_zoom',
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
-        sizing_mode='stretch_both', # full screen)
+        sizing_mode='stretch_both', # full screen
     )
     length = len(nodeData)
     vareas = []
@@ -148,32 +148,28 @@ def plotObserverPower(nodeId, nodeData, pOld):
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
-        active_drag='xbox_zoom',
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
-        sizing_mode='stretch_both', # full screen)
+        sizing_mode='stretch_both', # full screen
     )
     source = ColumnDataSource(dict(
       t=nodeData['t'],
-      i1=nodeData['i1'],
-      v1=nodeData['v1'],
-      v2=nodeData['v2'],
-      p=(nodeData['v2'] - nodeData['v1'])*nodeData['i1']
+      i=nodeData['i'],
+      v=nodeData['v'],
+      p=nodeData['v']*nodeData['i'],
     ))
-    # line_i1 = Line(x="t", y="i1", line_color='blue')
-    # line_v1 = Line(x="t", y="v1", line_color='red')
-    # line_v2 = Line(x="t", y="v2", line_color='orange')
+    line_i = Line(x="t", y="i", line_color='blue')
+    # line_v = Line(x="t", y="v", line_color='red')
     line_p = Line(x="t", y="p", line_color='black')
-    # p.add_glyph(source, line_i1, name='{}'.format(nodeId))
-    # p.add_glyph(source, line_v1, name='{}'.format(nodeId))
-    # p.add_glyph(source, line_v2, name='{}'.format(nodeId))
+    # p.add_glyph(source, line_i, name='{}'.format(nodeId))
+    # p.add_glyph(source, line_v, name='{}'.format(nodeId))
     p.add_glyph(source, line_p, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
     hover.tooltips = OrderedDict([
       ('Time', '@t{0.000000} s'),
-      ('V1', '@v1{0.000000} V'),
-      ('V2', '@v2{0.000000} V'),
-      ('I', '@i1{0.000000} A'),
-      ('Power', '@p{0.000000} W'),
+      ('V', '@v{0.000000} V'),
+      ('I', '@i{0.000000} mA'),
+      ('Power', '@p{0.000000} mW'),
       ('Node','$name'),
     ])
 
@@ -216,8 +212,10 @@ def plotAll(gpioData, powerData, testNum):
         p.add_layout(vline_start)
         p.add_layout(vline_end)
 
-        gpioPlots.update( {nodeId: p} )
+        # add functionality to reset by double-click
+        p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
 
+        gpioPlots.update( {nodeId: p} )
 
     # plot power data
     powerPlots = OrderedDict()
@@ -229,10 +227,14 @@ def plotAll(gpioData, powerData, testNum):
         p.add_layout(vline_start)
         p.add_layout(vline_end)
 
+        # add functionality to reset by double-click
+        p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
+
         powerPlots.update( {nodeId: p} )
     p.xaxis.visible = True
     # mergedPlots = powerPlots
     addLinkedCrosshairs([gpioPlots, powerPlots])
+
 
     # create linked dummy plot to get shared x axis without scaling height of bottom most plot
     allPlots = list(gpioPlots.values())
@@ -243,9 +245,9 @@ def plotAll(gpioData, powerData, testNum):
         plot_height=50,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
-        active_drag='xbox_zoom',
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
-        sizing_mode='stretch_both', # full screen)
+        sizing_mode='stretch_both', # full screen
     )
     source = ColumnDataSource(dict(x=[0, maxT], y1=np.zeros_like([0, 60]), y2=[1, 1]))
     vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
@@ -400,9 +402,8 @@ def visualizeFlocklabTrace(resultPath):
             # print(nodeId)
             trace = {
               't': nodeGrp.timestampRelative.to_numpy(),
-              'i1': nodeGrp['I1'].to_numpy(),
-              'v1': nodeGrp['V1'].to_numpy(),
-              'v2': nodeGrp['V2'].to_numpy(),
+              'i': nodeGrp['current[mA]'].to_numpy(),
+              'v': nodeGrp['voltage[V]'].to_numpy(),
             }
             powerData.update({nodeId: trace})
 

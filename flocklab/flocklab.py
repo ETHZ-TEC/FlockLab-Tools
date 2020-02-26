@@ -88,7 +88,7 @@ class Flocklab:
         Returns:
             String which concatenates all observer IDs and formats them according to the FlockLab xml config file requirements
         '''
-        obsList = ['{:03d}'.format(e) for e in obsList]
+        obsList = ['{:d}'.format(e) for e in obsList]
         return ' '.join(obsList)
 
     @staticmethod
@@ -327,18 +327,20 @@ class Flocklab:
         with open(serialFilename, 'r', encoding='utf-8', errors='replace') as f:
             ll = []
             for line in f.readlines():
+                print(line)
                 if line[0] == '#': # special processing of header
                     cols = line[2:].rstrip().split(',')
                     assert len(cols) == 5
                     continue
                 parts = line.rstrip().split(',')
-                ll.append(OrderedDict([
-                  (cols[0], parts[0]),                  # timestamp
-                  (cols[1], int(parts[1])),             # observer_id
-                  (cols[2], int(parts[2])),            # node_id
-                  (cols[3], parts[3]),                 # direction
-                  (cols[4], ','.join(parts[4:])),      # output
-                ]))
+                if len(parts) > 0:
+                    ll.append(OrderedDict([
+                      (cols[0], parts[0]),                  # timestamp
+                      (cols[1], int(parts[1])),             # observer_id
+                      (cols[2], int(parts[2])),            # node_id
+                      (cols[3], parts[3]),                 # direction
+                      (cols[4], ','.join(parts[4:])),      # output
+                    ]))
         df = pd.DataFrame.from_dict(ll)
         df.columns
         return df
