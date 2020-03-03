@@ -31,21 +31,14 @@ def addLinkedCrosshairs(plots):
                     # '''
     js_leave = '''cross.spans.height.computed_location=null; cross.spans.width.computed_location=null'''
 
-    figures = plots
-    for x in plots:
-        for plot in x:
-            # print(plot)
-            plot = x[plot]
-            # print(plot)
-            crosshair = CrosshairTool(dimensions = 'height')
-            plot.add_tools(crosshair)
-            for y in figures:
-                for figure in y:
-                    figure = y[figure]
-                    if figure != plot:
-                        args = {'cross': crosshair, 'fig': figure}
-                        figure.js_on_event('mousemove', CustomJS(args = args, code = js_move))
-                        figure.js_on_event('mouseleave', CustomJS(args = args, code = js_leave))
+    for currPlot in plots:
+        crosshair = CrosshairTool(dimensions = 'height')
+        currPlot.add_tools(crosshair)
+        for plot in plots:
+            if plot != currPlot:
+                args = {'cross': crosshair, 'fig': plot}
+                plot.js_on_event('mousemove', CustomJS(args = args, code = js_move))
+                plot.js_on_event('mouseleave', CustomJS(args = args, code = js_leave))
 
 
 
@@ -109,8 +102,8 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.2))
         x = p.add_glyph(source, lineGlyph, name=signalName)
 
-    legend = Legend(items=vareas, location="center")
-    p.add_layout(legend, 'right')
+    # legend = Legend(items=vareas, location="center")
+    # p.add_layout(legend, 'right')
 
 
     hover = p.select(dict(type=HoverTool))
@@ -119,7 +112,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
     p.xaxis.visible = False
-    p.yaxis.visible = True
+    p.yaxis.visible = False
 
 
     p.xaxis.major_tick_line_color = None  # turn off x-axis major ticks
@@ -231,30 +224,36 @@ def plotAll(gpioData, powerData, testNum):
         p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
 
         powerPlots.update( {nodeId: p} )
-    p.xaxis.visible = True
-    # mergedPlots = powerPlots
-    addLinkedCrosshairs([gpioPlots, powerPlots])
 
+    # figure out last plot for linking x-axis
+    if len(powerPlots) > 0:
+        lastPlot = list(powerPlots.values())[-1]
+    elif len(gpioPlots) > 0:
+        lastPlot = list(gpioPlots.values())[-1]
+    else:
+        lastPlot = None
+    # lastPlot.xaxis.visible = True # used if no dummy plot is used for x-axis
 
-    # create linked dummy plot to get shared x axis without scaling height of bottom most plot
-    allPlots = list(gpioPlots.values())
+    ## create linked dummy plot to get shared x axis without scaling height of bottom most plot
     pTime = figure(
         title=None,
-        x_range=allPlots[-1].x_range,
-        # plot_width=1200,
-        plot_height=50,
+        x_range=lastPlot.x_range,
+        plot_height=0,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
-        sizing_mode='stretch_both', # full screen
+        height_policy='fit',
+        width_policy='fit',
     )
-    source = ColumnDataSource(dict(x=[0, maxT], y1=np.zeros_like([0, 60]), y2=[1, 1]))
+    source = ColumnDataSource(dict(x=[0, maxT], y1=[0, 0], y2=[0, 0]))
     vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
     pTime.add_glyph(source, vareaGlyph)
     pTime.xgrid.grid_line_color = None
     pTime.ygrid.grid_line_color = None
     pTime.yaxis.visible = False
+
+    addLinkedCrosshairs( list(gpioPlots.values()) + list(powerPlots.values()) + [pTime] )
 
     # arrange all plots in grid
     gridPlots = []
@@ -293,6 +292,15 @@ def plotAll(gpioData, powerData, testNum):
         # plotCol = column(colList + [spacer], sizing_mode='stretch_both')
         # labelCol = column([labelDiv, spacer], sizing_mode='fixed')
         gridPlots.append([labelDiv, plotCol])
+
+    ## add plot for time scale
+    labelDiv = Div(
+        align='center',
+        width=30,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    gridPlots.append([labelDiv, pTime])
 
     # stack all plots
     grid = gridplot(
@@ -402,8 +410,8 @@ def visualizeFlocklabTrace(resultPath):
             # print(nodeId)
             trace = {
               't': nodeGrp.timestampRelative.to_numpy(),
-              'i': nodeGrp['current[mA]'].to_numpy(),
-              'v': nodeGrp['voltage[V]'].to_numpy(),
+              'i': nodeGrp['current_mA'].to_numpy(),
+              'v': nodeGrp['voltage_V'].to_numpy(),
             }
             powerData.update({nodeId: trace})
 
