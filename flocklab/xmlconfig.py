@@ -85,11 +85,11 @@ class GeneralConf():
     </generalConf>
     '''
 
-    def __init__(self):
-        self.name = None
-        self.description = None
-        self.duration = None
-        self.custom = ''
+    def __init__(self, name=None, description=None, duration=None, custom=''):
+        self.name = name
+        self.description = description
+        self.duration = duration
+        self.custom = custom
 
     def config2Str(self):
         assert self.name is not None
@@ -114,10 +114,10 @@ class TargetConf():
     </targetConf>
     '''
 
-    def __init__(self):
-        self.obsIds = None
-        self.voltage = 3.3
-        self.imageId = None
+    def __init__(self, obsIds=None, voltage=3.3, imageId=None):
+        self.obsIds = obsIds
+        self.voltage = voltage
+        self.imageId = imageId
 
     def config2Str(self):
         assert self.obsIds is not None
@@ -131,47 +131,74 @@ class TargetConf():
 
 class GpioTracingConf():
     # obsIds
-    gpioTracingConf = \
+    xmlStart = \
     '''
     <!-- GPIO Tracing Service configuration -->
     <gpioTracingConf>
-    <obsIds>{obsIds}</obsIds>
+    <obsIds>{obsIds}</obsIds>'''
+    xmlInt1 = \
+    '''
     <pinConf>
         <pin>INT1</pin>
         <edge>both</edge>
         <mode>continuous</mode>
-    </pinConf>
+    </pinConf>'''
+    xmlInt2 = \
+    '''
     <pinConf>
         <pin>INT2</pin>
         <edge>both</edge>
         <mode>continuous</mode>
-    </pinConf>
+    </pinConf>'''
+    xmlLed1 = \
+    '''
     <pinConf>
         <pin>LED1</pin>
         <edge>both</edge>
         <mode>continuous</mode>
-    </pinConf>
+    </pinConf>'''
+    xmlLed2 = \
+    '''
     <pinConf>
         <pin>LED2</pin>
         <edge>both</edge>
         <mode>continuous</mode>
-    </pinConf>
+    </pinConf>'''
+    xmlLed3 = \
+    '''
     <pinConf>
         <pin>LED3</pin>
         <edge>both</edge>
         <mode>continuous</mode>
-    </pinConf>
+    </pinConf>'''
+    xmlEnd = \
+    '''
     </gpioTracingConf>
     '''
 
-    def __init__(self):
-        self.obsIds = None
+    def __init__(self, obsIds=None, pinList=['INT1', 'INT2', 'LED1', 'LED2', 'LED3']):
+        self.obsIds = obsIds
+        self.pinList = pinList
 
     def config2Str(self):
         assert self.obsIds is not None
-        return GpioTracingConf.gpioTracingConf.format(
-            obsIds=Flocklab.formatObsIds(self.obsIds),
-        )
+        assert self.pinList is not None
+
+        ret = ''
+        ret += type(self).xmlStart.format(obsIds=Flocklab.formatObsIds(self.obsIds))
+        if 'INT1' in self.pinList:
+            ret += type(self).xmlInt1
+        if 'INT2' in self.pinList:
+            ret += type(self).xmlInt2
+        if 'LED1' in self.pinList:
+            ret += type(self).xmlLed1
+        if 'LED2' in self.pinList:
+            ret += type(self).xmlLed2
+        if 'LED3' in self.pinList:
+            ret += type(self).xmlLed3
+        ret += type(self).xmlEnd
+
+        return ret
 
 class GpioActuationConf():
     gpioActuationConf = \
@@ -196,10 +223,10 @@ class GpioActuationConf():
     </gpioActuationConf>
     '''
 
-    def __init__(self):
-        self.obsIds = None
-        self.levelSig1 = None
-        self.levelSig2 = None
+    def __init__(self, obsIds=None, levelSig1=None, levelSig2=None):
+        self.obsIds = obsIds
+        self.levelSig1 = levelSig1
+        self.levelSig2 = levelSig2
 
     def config2Str(self):
         assert self.obsIds is not None
@@ -225,9 +252,9 @@ class SerialConf():
     </serialConf>
     '''
 
-    def __init__(self):
-        self.obsIds = None
-        self.remoteIp = None
+    def __init__(self, obsIds=None, remoteIp=None):
+        self.obsIds = obsIds
+        self.remoteIp = remoteIp
 
     def config2Str(self):
         assert self.obsIds is not None
@@ -255,11 +282,11 @@ class PowerProfilingConf():
     </powerProfilingConf>
     '''
 
-    def __init__(self):
-        self.obsIds = None
-        self.duration = None
-        self.offset = 0
-        self.samplingRate = None
+    def __init__(self, obsIds=None, duration=None, offset=0, samplingRate=None):
+        self.obsIds = obsIds
+        self.duration = duration
+        self.offset = offset
+        self.samplingRate = samplingRate
 
     def config2Str(self):
         assert self.obsIds is not None
@@ -290,12 +317,12 @@ class ImageConf():
     </imageConf>
     '''
 
-    def __init__(self):
-        self.imageId = None
-        self.imageName = None
-        self.imageDescription = None
-        self.imagePlatform = None
-        self.imagePath = None
+    def __init__(self, imageId=None, imageName=None, imageDescription=None, imagePlatform=None, imagePath=None):
+        self.imageId = imageId
+        self.imageName = imageName
+        self.imageDescription = imageDescription
+        self.imagePlatform = imagePlatform
+        self.imagePath = imagePath
 
     def config2Str(self):
         assert self.imageId is not None
