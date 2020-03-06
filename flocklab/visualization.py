@@ -338,7 +338,9 @@ def visualizeFlocklabTrace(resultPath):
     testNum = os.path.basename(os.path.abspath(resultPath))
 
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
+    requiredGpioCols = ['timestamp', 'node_id', 'pin_name', 'value']
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
+    requiredPowerCols = ['timestamp', 'node_id', 'current_mA', 'voltage_V']
     gpioAvailable = False
     powerAvailable = False
 
@@ -346,10 +348,16 @@ def visualizeFlocklabTrace(resultPath):
     if os.path.isfile(gpioPath):
         # Read gpio data csv to pandas dataframe
         gpioDf = pd.read_csv(gpioPath)
-        # gpioDf.columns = ['timestamp'] + list(gpioDf.columns[1:])
-        gpioDf.rename(columns={'# timestamp': 'timestamp'},inplace=True)
+        # sanity check: column names
+        for col in requiredGpioCols:
+            if not col in gpioDf.columns:
+                raise Exception('ERROR: Required column ({}) in gpiotracing.csv file is missing.'.format(col))
 
         if len(gpioDf) > 0:
+            # sanity check node_id data type
+            if not 'int' in str(gpioDf.node_id.dtype):
+                raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
+
             gpioAvailable = True
     else:
         print('gpiotracing.csv could not be found!')
@@ -357,8 +365,16 @@ def visualizeFlocklabTrace(resultPath):
     if os.path.isfile(powerPath):
         # Read power data csv to pandas dataframe
         powerDf = pd.read_csv(powerPath)
-        powerDf.rename(columns={'# timestamp': 'timestamp'},inplace=True)
+        # sanity check: column names
+        for col in requiredPowerCols:
+            if not col in powerDf.columns:
+                raise Exception('ERROR: Required column ({}) in powerprofiling.csv file is missing.'.format(col))
+
         if len(powerDf) > 0:
+            # sanity check node_id data type
+            if not 'int' in str(powerDf.node_id.dtype):
+                raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
+
             powerAvailable = True
     else:
         print('powerprofiling.csv could not be found!')
