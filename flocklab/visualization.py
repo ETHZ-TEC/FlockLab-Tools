@@ -192,8 +192,8 @@ def plotAll(gpioData, powerData, testNum):
                 minT = pinMin
 
 
-    vline_start = Span(location=minT, dimension='height', line_color=(0.1,0.1,0.1,0.1), line_width=3)
-    vline_end = Span(location=maxT, dimension='height', line_color=(0.1,0.1,0.1,0.1), line_width=3)
+    vline_start = Span(location=minT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
+    vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
 
     # plot gpio data
     gpioPlots = OrderedDict()
