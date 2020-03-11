@@ -10,21 +10,27 @@ import itertools
 import os
 
 from bokeh.plotting import figure, show, output_file
-from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
+from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, TapTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column, layout, Spacer
-from bokeh.models import Legend, Span
+from bokeh.models import Legend, Span, Label
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
-from bokeh.events import DoubleTap
+from bokeh.events import Tap, DoubleTap, ButtonClick
 
 
 ###############################################################################
 
 def addLinkedCrosshairs(plots):
-    js_move = '''   start = fig.x_range.start, end = fig.x_range.end
-                    if(cb_obj.x>=start && cb_obj.x<=end && cb_obj.y>=start && cb_obj.y<=end)
-                        { cross.spans.height.computed_location=cb_obj.sx }
-                    else { cross.spans.height.computed_location = null }'''
+    js_move = '''   start_x = plot.x_range.start
+                    end_x = plot.x_range.end
+                    start_y = plot.y_range.start
+                    end_y = plot.y_range.end
+                    if(cb_obj.x>=start_x && cb_obj.x<=end_x && cb_obj.y>=start_y && cb_obj.y<=end_y) {
+                        cross.spans.height.computed_location=cb_obj.sx
+                    }
+                    else {
+                        cross.spans.height.computed_location = null
+                    }'''
                     # if(cb_obj.y>=start && cb_obj.y<=end && cb_obj.x>=start && cb_obj.x<=end)
                     #     { cross.spans.width.computed_location=cb_obj.sy  }
                     # else { cross.spans.width.computed_location=null }
@@ -36,7 +42,7 @@ def addLinkedCrosshairs(plots):
         currPlot.add_tools(crosshair)
         for plot in plots:
             if plot != currPlot:
-                args = {'cross': crosshair, 'fig': plot}
+                args = {'cross': crosshair, 'plot': plot}
                 plot.js_on_event('mousemove', CustomJS(args = args, code = js_move))
                 plot.js_on_event('mouseleave', CustomJS(args = args, code = js_leave))
 
@@ -107,7 +113,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
 
 
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Signal','$name')])
+    hover.tooltips = OrderedDict([('Time', '@x{0.0000000} s'),('Signal','$name')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -159,7 +165,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
     p.add_glyph(source, line_p, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
     hover.tooltips = OrderedDict([
-      ('Time', '@t{0.000000} s'),
+      ('Time', '@t{0.00000000} s'),
       ('V', '@v{0.000000} V'),
       ('I', '@i{0.000000} mA'),
       ('Power', '@p{0.000000} mW'),
@@ -195,6 +201,41 @@ def plotAll(gpioData, powerData, testNum):
     vline_start = Span(location=minT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
     vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
 
+    # time measuring with marker lines
+    js_click = ''' if (num_clicked[0]==0) {
+                        marker_start.visible=true
+                        marker_start.location=cb_obj.x
+                        first_val[0] = cb_obj.x
+                    } else if (num_clicked[0]==1) {
+                        marker_end.visible=true
+                        marker_end.location=cb_obj.x
+                        timediff = cb_obj.x - first_val[0]
+                        marker_label.x = cb_obj.x
+                        marker_label.y = cb_obj.y
+                        marker_label.text = timediff.toFixed(7) + " s"
+                        marker_label.visible=true
+                    } else if (num_clicked[0]==2) {
+                        marker_start.visible=false
+                        marker_end.visible=false
+                        marker_label.visible=false
+                    }
+                    num_clicked[0] = (num_clicked[0] + 1) % 3
+    '''
+    num_clicked = [0] # needs to be a list (we need to pass a reference to an obj, int does not keep state)
+    first_val = [0]
+    marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
+    marker_start.location = 5
+    marker_start.visible = False
+    marker_end = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
+    marker_end.location = 10
+    marker_end.visible = False
+    marker_label = Label()
+    marker_label.x = 10
+    marker_label.y = 1
+    marker_label.x_offset = 10
+    marker_label.text = 'Test'
+    marker_label.visible = False
+
     # plot gpio data
     gpioPlots = OrderedDict()
     p = None
@@ -205,10 +246,18 @@ def plotAll(gpioData, powerData, testNum):
         p.add_layout(vline_start)
         p.add_layout(vline_end)
 
+        # time measuring
+        p.add_layout(marker_start)
+        p.add_layout(marker_end)
+        p.add_layout(marker_label)
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'marker_label': marker_label, 'p': p, 'num_clicked': num_clicked, 'first_val': first_val}
+        p.js_on_event(Tap, CustomJS(args = args, code = js_click))
+
         # add functionality to reset by double-click
         p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
 
         gpioPlots.update( {nodeId: p} )
+
 
     # plot power data
     powerPlots = OrderedDict()
@@ -219,6 +268,13 @@ def plotAll(gpioData, powerData, testNum):
         # adding a start and end line
         p.add_layout(vline_start)
         p.add_layout(vline_end)
+
+        # time measuring
+        p.add_layout(marker_start)
+        p.add_layout(marker_end)
+        p.add_layout(marker_label)
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'marker_label': marker_label, 'p': p, 'num_clicked': num_clicked, 'first_val': first_val}
+        p.js_on_event(Tap, CustomJS(args = args, code = js_click))
 
         # add functionality to reset by double-click
         p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
