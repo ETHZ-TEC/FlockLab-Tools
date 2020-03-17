@@ -33,9 +33,8 @@ class FlocklabError(Exception):
 
 class Flocklab:
     def __init__(self):
-        # self.apiBaseAddr = 'https://www.flocklab.ethz.ch/user/'
-        self.apiBaseAddr = 'https://flocklab-dev-server.ethz.ch/'
-        self.sslVerify = False
+        self.apiBaseAddr = 'https://flocklab.ethz.ch/user/'
+        self.sslVerify = True
 
     def setApiBaseAddr(self, addr):
         self.apiBaseAddr = addr
@@ -271,9 +270,13 @@ class Flocklab:
                 'platform': (None, platform),
             }
             req = requests.post(self.apiBaseAddr + 'api.php', files=files, verify=self.sslVerify)
-            obsList = json.loads(req.text)["output"].split(' ')
-            obsList = [int(e) for e in obsList]
-            return obsList
+            output = json.loads(req.text)["output"]
+            if len(output) > 0:
+                obsList = output.split(' ')
+                obsList = [int(e) for e in obsList]
+                return obsList
+            else:
+                return []
         except Exception as e:
             print(e)
             print("Failed to fetch active observers from FlockLab API!")

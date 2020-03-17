@@ -8,8 +8,9 @@ import pandas as pd
 from collections import Counter, OrderedDict
 import itertools
 import os
+import sys
 
-from bokeh.plotting import figure, show, output_file
+from bokeh.plotting import figure, show, save, output_file
 from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, TapTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column, layout, Spacer
@@ -184,7 +185,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
 
     return p
 
-def plotAll(gpioData, powerData, testNum):
+def plotAll(gpioData, powerData, testNum, interactive=False):
     # determine max timestamp value
     maxT = 0
     minT = np.inf
@@ -260,8 +261,12 @@ def plotAll(gpioData, powerData, testNum):
 
 
     # plot power data
+    if len(gpioPlots):
+        p = list(gpioPlots.values())[-1]
+    else:
+        p = None
+
     powerPlots = OrderedDict()
-    p = list(gpioPlots.values())[-1]
     for nodeId, nodeData in powerData.items():
         p = plotObserverPower(nodeId, nodeData, pOld=p)
 
@@ -381,11 +386,20 @@ def plotAll(gpioData, powerData, testNum):
     )
 
     # render all plots
-    show(finalLayout)
+    if interactive:
+        show(finalLayout)
+    else:
+        save(finalLayout)
 
 
 
-def visualizeFlocklabTrace(resultPath):
+def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
+    '''Plots FlockLab results using bokeh.
+    Args:
+        resultPath: path to the flocklab results (unzipped)
+        outputDir:  directory to store the resulting html file in (default: current working directory)
+        interctive: switch to turn on/off automatic display of generated bokeh plot
+    '''
     # check for correct path
     if os.path.isfile(resultPath):
         resultPath = os.path.dirname(resultPath)
@@ -434,6 +448,11 @@ def visualizeFlocklabTrace(resultPath):
             powerAvailable = True
     else:
         print('powerprofiling.csv could not be found!')
+
+    # handle case where there is no data to plot
+    if (not gpioAvailable) and (not powerAvailable):
+        print('ERROR: No data for plotting available!')
+        sys.exit(1)
 
     # determine first timestamp (globally)
     minT = None
@@ -504,8 +523,11 @@ def visualizeFlocklabTrace(resultPath):
     #         trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
     #         powerData.update({nodeId: trace})
 
-    output_file(os.path.join(os.getcwd(), "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
-    plotAll(gpioData, powerData, testNum=testNum)
+    if outputDir is None:
+        output_file(os.path.join(os.getcwd(), "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
+    else:
+        output_file(os.path.join(outputDir, "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
+    plotAll(gpioData, powerData, testNum=testNum, interactive=interactive)
 
 
 ###############################################################################

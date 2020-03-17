@@ -60,7 +60,7 @@ def main():
     elif args.platforms:
         print(fl.getPlatforms())
     elif args.visualize is not None:
-        visualizeFlocklabTrace(args.visualize)
+        visualizeFlocklabTrace(args.visualize, interactive=True)
 
 ################################################################################
 

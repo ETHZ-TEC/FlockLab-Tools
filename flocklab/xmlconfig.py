@@ -310,7 +310,6 @@ class ImageConf():
         <name>{imageName}</name>
         <description>{imageDescription}</description>
         <platform>{imagePlatform}</platform>
-        <os>other</os>
         <data>
 {imageString}
         </data>
