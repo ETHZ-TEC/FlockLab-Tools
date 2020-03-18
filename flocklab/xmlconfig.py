@@ -57,7 +57,7 @@ class FlocklabXmlConfig():
                 else:
                     print('Image last modified: {}'.format(datetime.datetime.fromtimestamp(os.path.getmtime(config.imagePath))))
 
-        print('Used nodes (all): {}'.format(list(set(allNodes))))
+        print('Used nodes (all): {}'.format(sorted(list(set(allNodes)))))
 
 
         with open(xmlPath, "w") as f:
@@ -218,17 +218,22 @@ class SerialConf():
         <port>serial</port>
         <baudrate>115200</baudrate>
         <mode>ascii</mode>
-        <remoteIp>0.0.0.0</remoteIp>
+        <remoteIp>{remoteIp}</remoteIp>
     </serialConf>
     '''
 
-    def __init__(self):
-        self.obsIds = None
+    def __init__(self, obsIds=None, remoteIp=None):
+        self.obsIds = obsIds
+        self.remoteIp = remoteIp
 
     def config2Str(self):
         assert self.obsIds is not None
+        # remote IP is optional
+        if self.remoteIp is None:
+            self.remoteIp = '0.0.0.0'
         return SerialConf.serialConf.format(
             obsIds=Flocklab.formatObsIds(self.obsIds),
+            remoteIp=self.remoteIp,
         )
 
 

@@ -32,11 +32,11 @@ class FlocklabError(Exception):
 
 
 class Flocklab:
-    flocklabServerBase = 'https://www.flocklab.ethz.ch/user/'
+    flocklabServerBase = 'https://flocklab-old.ethz.ch/'
 
     @staticmethod
     def getCredentials():
-        '''Feteches FlockLab credentials stored in .flocklabauth file
+        '''Fetches FlockLab credentials stored in .flocklabauth file
         Returns:
             Username & Password
         '''
