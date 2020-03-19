@@ -5,4 +5,4 @@ Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
 
 from .flocklab import Flocklab
 from .visualization import visualizeFlocklabTrace
-from .xmlconfig import FlocklabXmlConfig, GeneralConf, TargetConf, SerialConf, GpioTracingConf, GpioActuationConf, PowerProfilingConf, ImageConf
+from .xmlconfig import FlocklabXmlConfig, GeneralConf, TargetConf, SerialConf, GpioTracingConf, GpioActuationConf, PowerProfilingConf, ImageConf, DebugConf
