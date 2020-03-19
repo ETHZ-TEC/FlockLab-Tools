@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
+Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 """
 
 import base64

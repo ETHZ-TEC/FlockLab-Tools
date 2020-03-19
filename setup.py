@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
+Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 """
 
 import setuptools
@@ -13,10 +13,10 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name='flocklab-tools',
     python_requires='>=3.6',
-    version='0.1.1',
+    version='0.2.0a1',
     author='Computer Engineering Group, ETH Zurich',
     author_email='rtrueb@ethz.ch',
-    description='Python support for using the FlockLab testbed (flocklab CLI, creating flocklab xml, visualization).',
+    description='Python support for using the FlockLab 2 testbed (flocklab CLI, creating flocklab xml, visualization).',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='https://flocklab.ethz.ch/',
