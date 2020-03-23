@@ -201,8 +201,6 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
 
     vline_start = Span(location=minT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
     vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
-<<<<<<< HEAD
-=======
 
     # time measuring with marker lines
     js_click = ''' if (num_clicked[0]==0) {
@@ -238,7 +236,6 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     marker_label.x_offset = 10
     marker_label.text = 'Test'
     marker_label.visible = False
->>>>>>> flocklab2
 
     # plot gpio data
     gpioPlots = OrderedDict()
