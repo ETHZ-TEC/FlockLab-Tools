@@ -400,6 +400,11 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
         outputDir:  directory to store the resulting html file in (default: current working directory)
         interctive: switch to turn on/off automatic display of generated bokeh plot
     '''
+    # check if resultPath is not empty
+    print(resultPath)
+    if resultPath.strip() == '' or resultPath is None:
+        raise Exception('ERROR: No FlockLab result directory provided as argument!')
+
     # check for correct path
     if os.path.isfile(resultPath):
         resultPath = os.path.dirname(resultPath)
@@ -533,6 +538,4 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
 ###############################################################################
 
 if __name__ == "__main__":
-    output_file("out.html")
-
-    visualizeFlocklabTrace(path)
+    pass

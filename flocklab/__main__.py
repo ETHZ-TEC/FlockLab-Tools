@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import appdirs
 
+from ._version import __version__
 from .visualization import visualizeFlocklabTrace
 from .flocklab import Flocklab
 
@@ -34,12 +35,11 @@ def main():
     parser.add_argument('-f', '--fetch', metavar='<testid>', help='fetch test results (via webdav) [NOT IMPLEMENTED YET!]')
     parser.add_argument('-o', '--observers', metavar='<platform>', help='get a list of the currently available (online) observers')
     parser.add_argument('-p', '--platforms', help='get a list of the available platforms', action='store_true', default=False)
-    parser.add_argument('-x', '--visualize', metavar='<result directory>', help='Visualize FlockLab result data', default='.', type=str, nargs='?') # default unfortunately does not work properly together with nargs
+    parser.add_argument('-x', '--visualize', metavar='<result directory>', help='Visualize FlockLab result data', type=str, nargs='?') # default unfortunately does not work properly together with nargs
+    parser.add_argument('-V', '--version', help='Print version number', action='store_true', default=False)
 
 
     args = parser.parse_args()
-    # assertions
-    # (none)
 
     fl = Flocklab()
     if args.validate is not None:
@@ -61,6 +61,10 @@ def main():
         print(fl.getPlatforms())
     elif args.visualize is not None:
         visualizeFlocklabTrace(args.visualize, interactive=True)
+    elif args.version:
+        print(__version__)
+    else:
+        parser.print_help()
 
 ################################################################################
 

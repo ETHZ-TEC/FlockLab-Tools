@@ -4,8 +4,19 @@ Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 """
 
 import setuptools
-# import os
+import re
 
+# Version number (set in '_version.py'!)
+VERSIONFILE="flocklab/_version.py"
+verstrline = open(VERSIONFILE, "rt").read()
+VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    verstr = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
+
+# README
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
@@ -13,7 +24,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name='flocklab-tools',
     python_requires='>=3.6',
-    version='0.2.0a1',
+    version=verstr,
     author='Computer Engineering Group, ETH Zurich',
     author_email='rtrueb@ethz.ch',
     description='Python support for using the FlockLab 2 testbed (flocklab CLI, creating flocklab xml, visualization).',
