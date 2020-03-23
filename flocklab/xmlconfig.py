@@ -67,7 +67,7 @@ class FlocklabXmlConfig():
                 allNodes += config.obsIds
                 print('== {}: {} =='.format(type(config).__name__, config.embeddedImageId))
                 print('Selected nodes: {}'.format(config.obsIds))
-            elif type(config) == ImageConf:
+            elif type(config) == EmbeddedImageConf:
                 print('== {}: {} =='.format(type(config).__name__, config.embeddedImageId))
                 if config.imagePath == '':
                     print('Image last modified:- (data empty)')
@@ -231,7 +231,7 @@ class GpioActuationConf():
         # TODO
         return x
 
-class ImageConf():
+class EmbeddedImageConf():
     def __init__(self, embeddedImageId=None, imageName=None, imageDescription=None, imagePlatform=None, imagePath=None, core=None):
         self.embeddedImageId = embeddedImageId
         self.name = imageName
@@ -242,13 +242,13 @@ class ImageConf():
 
     def config2Et(self, x):
         if self.embeddedImageId is None:
-            raise Exception('ERROR: imageId of ImageConf needs to be set!')
+            raise Exception('ERROR: imageId of EmbeddedImageConf needs to be set!')
         if self.name is None:
-            raise Exception('ERROR: imageName of ImageConf needs to be set!')
+            raise Exception('ERROR: imageName of EmbeddedImageConf needs to be set!')
         if self.platform is None:
-            raise Exception('ERROR: imagePlatform of ImageConf needs to be set!')
+            raise Exception('ERROR: imagePlatform of EmbeddedImageConf needs to be set!')
         if self.imagePath is None:
-            raise Exception('ERROR: imagePath of ImageConf needs to be set!')
+            raise Exception('ERROR: imagePath of EmbeddedImageConf needs to be set!')
 
         if self.imagePath == '':
             # No image provided -> flocklab will take image of other image conf
@@ -258,7 +258,7 @@ class ImageConf():
             self.imageString = Flocklab.getImageAsBase64(self.imagePath)
 
         x.append(et.Comment('Image configuration'))
-        ic = FlocklabXmlConfig.addSubElement(x, 'imageConf')
+        ic = FlocklabXmlConfig.addSubElement(x, 'embeddedImageConf')
         FlocklabXmlConfig.addSubElement(ic, 'embeddedImageId', text='{}'.format(self.embeddedImageId))
         FlocklabXmlConfig.addSubElement(ic, 'name', text='{}'.format(self.name))
         if self.description is not None:
