@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
+Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 """
 
 import base64
@@ -34,32 +34,33 @@ def main():
     parser.add_argument('-f', '--fetch', metavar='<testid>', help='fetch test results (via webdav) [NOT IMPLEMENTED YET!]')
     parser.add_argument('-o', '--observers', metavar='<platform>', help='get a list of the currently available (online) observers')
     parser.add_argument('-p', '--platforms', help='get a list of the available platforms', action='store_true', default=False)
-    parser.add_argument('-x', '--visualize', metavar='<result directory>', help='Visualize FlockLab result data')
+    parser.add_argument('-x', '--visualize', metavar='<result directory>', help='Visualize FlockLab result data', default='.', type=str, nargs='?') # default unfortunately does not work properly together with nargs
 
 
     args = parser.parse_args()
     # assertions
     # (none)
 
+    fl = Flocklab()
     if args.validate is not None:
-        print(Flocklab.xmlValidate(args.validate))
+        print(fl.xmlValidate(args.validate))
     elif args.create is not None:
-        print(Flocklab.createTest(args.create))
+        print(fl.createTest(args.create))
     elif args.abort is not None:
-        print(Flocklab.abortTest(args.abort))
+        print(fl.abortTest(args.abort))
     elif args.delete is not None:
-        print(Flocklab.deleteTest(args.delete))
+        print(fl.deleteTest(args.delete))
     elif args.get is not None:
-        print(Flocklab.getResults(args.get))
+        print(fl.getResults(args.get))
     elif args.fetch is not None:
-        # print(Flocklab.festResults(args.fetch))
+        # print(fl.festResults(args.fetch))
         print('Sorry, this feature is not yet implemented!')
     elif args.observers is not None:
-        print(Flocklab.getObsIds(args.observers))
+        print(fl.getObsIds(args.observers))
     elif args.platforms:
-        print(Flocklab.getPlatforms())
+        print(fl.getPlatforms())
     elif args.visualize is not None:
-        visualizeFlocklabTrace(args.visualize)
+        visualizeFlocklabTrace(args.visualize, interactive=True)
 
 ################################################################################
 

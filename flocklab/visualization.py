@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright (c) 2019, ETH Zurich, Computer Engineering Group (TEC)
+Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 """
 
 import numpy as np
@@ -8,44 +8,44 @@ import pandas as pd
 from collections import Counter, OrderedDict
 import itertools
 import os
+import sys
 
-from bokeh.plotting import figure, show, output_file
-from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
+from bokeh.plotting import figure, show, save, output_file
+from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, TapTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column, layout, Spacer
-from bokeh.models import Legend, Span
+from bokeh.models import Legend, Span, Label
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
-
+from bokeh.events import Tap, DoubleTap, ButtonClick
 
 
 ###############################################################################
 
 def addLinkedCrosshairs(plots):
-    js_move = '''   start = fig.x_range.start, end = fig.x_range.end
-                    if(cb_obj.x>=start && cb_obj.x<=end && cb_obj.y>=start && cb_obj.y<=end)
-                        { cross.spans.height.computed_location=cb_obj.sx }
-                    else { cross.spans.height.computed_location = null }'''
+    js_move = '''   start_x = plot.x_range.start
+                    end_x = plot.x_range.end
+                    start_y = plot.y_range.start
+                    end_y = plot.y_range.end
+                    if(cb_obj.x>=start_x && cb_obj.x<=end_x && cb_obj.y>=start_y && cb_obj.y<=end_y) {
+                        cross.spans.height.computed_location=cb_obj.sx
+                    }
+                    else {
+                        cross.spans.height.computed_location = null
+                    }'''
                     # if(cb_obj.y>=start && cb_obj.y<=end && cb_obj.x>=start && cb_obj.x<=end)
                     #     { cross.spans.width.computed_location=cb_obj.sy  }
                     # else { cross.spans.width.computed_location=null }
                     # '''
     js_leave = '''cross.spans.height.computed_location=null; cross.spans.width.computed_location=null'''
 
-    figures = plots
-    for x in plots:
-        for plot in x:
-            # print(plot)
-            plot = x[plot]
-            # print(plot)
-            crosshair = CrosshairTool(dimensions = 'height')
-            plot.add_tools(crosshair)
-            for y in figures:
-                for figure in y:
-                    figure = y[figure]
-                    if figure != plot:
-                        args = {'cross': crosshair, 'fig': figure}
-                        figure.js_on_event('mousemove', CustomJS(args = args, code = js_move))
-                        figure.js_on_event('mouseleave', CustomJS(args = args, code = js_leave))
+    for currPlot in plots:
+        crosshair = CrosshairTool(dimensions = 'height')
+        currPlot.add_tools(crosshair)
+        for plot in plots:
+            if plot != currPlot:
+                args = {'cross': crosshair, 'plot': plot}
+                plot.js_on_event('mousemove', CustomJS(args = args, code = js_move))
+                plot.js_on_event('mouseleave', CustomJS(args = args, code = js_leave))
 
 
 
@@ -90,9 +90,9 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
-        active_drag='xbox_zoom',
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
-        sizing_mode='stretch_both', # full screen)
+        sizing_mode='stretch_both', # full screen
     )
     length = len(nodeData)
     vareas = []
@@ -109,17 +109,17 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.2))
         x = p.add_glyph(source, lineGlyph, name=signalName)
 
-    legend = Legend(items=vareas, location="center")
-    p.add_layout(legend, 'right')
+    # legend = Legend(items=vareas, location="center")
+    # p.add_layout(legend, 'right')
 
 
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Signal','$name')])
+    hover.tooltips = OrderedDict([('Time', '@x{0.0000000} s'),('Signal','$name')])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
     p.xaxis.visible = False
-    p.yaxis.visible = True
+    p.yaxis.visible = False
 
 
     p.xaxis.major_tick_line_color = None  # turn off x-axis major ticks
@@ -148,20 +148,35 @@ def plotObserverPower(nodeId, nodeData, pOld):
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
-        active_drag='xbox_zoom',
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
-        sizing_mode='stretch_both', # full screen)
+        sizing_mode='stretch_both', # full screen
     )
-    source = ColumnDataSource(dict(x=nodeData['t'], y=nodeData['v']))
-    lineGlyph = Line(x="x", y="y", line_color='black')
-    p.add_glyph(source, lineGlyph, name='{}'.format(nodeId))
+    source = ColumnDataSource(dict(
+      t=nodeData['t'],
+      i=nodeData['i'],
+      v=nodeData['v'],
+      p=nodeData['v']*nodeData['i'],
+    ))
+    line_i = Line(x="t", y="i", line_color='blue')
+    # line_v = Line(x="t", y="v", line_color='red')
+    line_p = Line(x="t", y="p", line_color='black')
+    # p.add_glyph(source, line_i, name='{}'.format(nodeId))
+    # p.add_glyph(source, line_v, name='{}'.format(nodeId))
+    p.add_glyph(source, line_p, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x{0.000000} s'),('Current', '@y mA'),('Node','$name')])
+    hover.tooltips = OrderedDict([
+      ('Time', '@t{0.00000000} s'),
+      ('V', '@v{0.000000} V'),
+      ('I', '@i{0.000000} mA'),
+      ('Power', '@p{0.000000} mW'),
+      ('Node','$name'),
+    ])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
     p.xaxis.visible = False
-#    p.yaxis.visible = False
+    p.yaxis.visible = False
 #    p.yaxis.axis_label_orientation = "horizontal" # not working!
 #    p.axis.major_label_orientation = 'vertical'
 
@@ -170,7 +185,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
 
     return p
 
-def plotAll(gpioData, powerData, testNum):
+def plotAll(gpioData, powerData, testNum, interactive=False):
     # determine max timestamp value
     maxT = 0
     minT = np.inf
@@ -186,6 +201,44 @@ def plotAll(gpioData, powerData, testNum):
 
     vline_start = Span(location=minT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
     vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
+<<<<<<< HEAD
+=======
+
+    # time measuring with marker lines
+    js_click = ''' if (num_clicked[0]==0) {
+                        marker_start.visible=true
+                        marker_start.location=cb_obj.x
+                        first_val[0] = cb_obj.x
+                    } else if (num_clicked[0]==1) {
+                        marker_end.visible=true
+                        marker_end.location=cb_obj.x
+                        timediff = cb_obj.x - first_val[0]
+                        marker_label.x = cb_obj.x
+                        marker_label.y = cb_obj.y
+                        marker_label.text = timediff.toFixed(7) + " s"
+                        marker_label.visible=true
+                    } else if (num_clicked[0]==2) {
+                        marker_start.visible=false
+                        marker_end.visible=false
+                        marker_label.visible=false
+                    }
+                    num_clicked[0] = (num_clicked[0] + 1) % 3
+    '''
+    num_clicked = [0] # needs to be a list (we need to pass a reference to an obj, int does not keep state)
+    first_val = [0]
+    marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
+    marker_start.location = 5
+    marker_start.visible = False
+    marker_end = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
+    marker_end.location = 10
+    marker_end.visible = False
+    marker_label = Label()
+    marker_label.x = 10
+    marker_label.y = 1
+    marker_label.x_offset = 10
+    marker_label.text = 'Test'
+    marker_label.visible = False
+>>>>>>> flocklab2
 
     # plot gpio data
     gpioPlots = OrderedDict()
@@ -197,12 +250,26 @@ def plotAll(gpioData, powerData, testNum):
         p.add_layout(vline_start)
         p.add_layout(vline_end)
 
+        # time measuring
+        p.add_layout(marker_start)
+        p.add_layout(marker_end)
+        p.add_layout(marker_label)
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'marker_label': marker_label, 'p': p, 'num_clicked': num_clicked, 'first_val': first_val}
+        p.js_on_event(Tap, CustomJS(args = args, code = js_click))
+
+        # add functionality to reset by double-click
+        p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
+
         gpioPlots.update( {nodeId: p} )
 
 
     # plot power data
+    if len(gpioPlots):
+        p = list(gpioPlots.values())[-1]
+    else:
+        p = None
+
     powerPlots = OrderedDict()
-    p = list(gpioPlots.values())[-1]
     for nodeId, nodeData in powerData.items():
         p = plotObserverPower(nodeId, nodeData, pOld=p)
 
@@ -210,30 +277,47 @@ def plotAll(gpioData, powerData, testNum):
         p.add_layout(vline_start)
         p.add_layout(vline_end)
 
-        powerPlots.update( {nodeId: p} )
-    p.xaxis.visible = True
-    # mergedPlots = powerPlots
-    addLinkedCrosshairs([gpioPlots, powerPlots])
+        # time measuring
+        p.add_layout(marker_start)
+        p.add_layout(marker_end)
+        p.add_layout(marker_label)
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'marker_label': marker_label, 'p': p, 'num_clicked': num_clicked, 'first_val': first_val}
+        p.js_on_event(Tap, CustomJS(args = args, code = js_click))
 
-    # create linked dummy plot to get shared x axis without scaling height of bottom most plot
-    allPlots = list(gpioPlots.values())
+        # add functionality to reset by double-click
+        p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
+
+        powerPlots.update( {nodeId: p} )
+
+    # figure out last plot for linking x-axis
+    if len(powerPlots) > 0:
+        lastPlot = list(powerPlots.values())[-1]
+    elif len(gpioPlots) > 0:
+        lastPlot = list(gpioPlots.values())[-1]
+    else:
+        lastPlot = None
+    # lastPlot.xaxis.visible = True # used if no dummy plot is used for x-axis
+
+    ## create linked dummy plot to get shared x axis without scaling height of bottom most plot
     pTime = figure(
         title=None,
-        x_range=allPlots[-1].x_range,
-        # plot_width=1200,
-        plot_height=50,
+        x_range=lastPlot.x_range,
+        plot_height=0,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
-        active_drag='xbox_zoom',
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
-        sizing_mode='stretch_both', # full screen)
+        height_policy='fit',
+        width_policy='fit',
     )
-    source = ColumnDataSource(dict(x=[0, maxT], y1=np.zeros_like([0, 60]), y2=[1, 1]))
+    source = ColumnDataSource(dict(x=[0, maxT], y1=[0, 0], y2=[0, 0]))
     vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
     pTime.add_glyph(source, vareaGlyph)
     pTime.xgrid.grid_line_color = None
     pTime.ygrid.grid_line_color = None
     pTime.yaxis.visible = False
+
+    addLinkedCrosshairs( list(gpioPlots.values()) + list(powerPlots.values()) + [pTime] )
 
     # arrange all plots in grid
     gridPlots = []
@@ -273,6 +357,15 @@ def plotAll(gpioData, powerData, testNum):
         # labelCol = column([labelDiv, spacer], sizing_mode='fixed')
         gridPlots.append([labelDiv, plotCol])
 
+    ## add plot for time scale
+    labelDiv = Div(
+        align='center',
+        width=30,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    gridPlots.append([labelDiv, pTime])
+
     # stack all plots
     grid = gridplot(
         gridPlots,
@@ -296,11 +389,20 @@ def plotAll(gpioData, powerData, testNum):
     )
 
     # render all plots
-    show(finalLayout)
+    if interactive:
+        show(finalLayout)
+    else:
+        save(finalLayout)
 
 
 
-def visualizeFlocklabTrace(resultPath):
+def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
+    '''Plots FlockLab results using bokeh.
+    Args:
+        resultPath: path to the flocklab results (unzipped)
+        outputDir:  directory to store the resulting html file in (default: current working directory)
+        interctive: switch to turn on/off automatic display of generated bokeh plot
+    '''
     # check for correct path
     if os.path.isfile(resultPath):
         resultPath = os.path.dirname(resultPath)
@@ -309,8 +411,9 @@ def visualizeFlocklabTrace(resultPath):
     testNum = os.path.basename(os.path.abspath(resultPath))
 
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
+    requiredGpioCols = ['timestamp', 'node_id', 'pin_name', 'value']
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
-    actutationPath = os.path.join(resultPath, 'gpioactuation.csv')
+    requiredPowerCols = ['timestamp', 'node_id', 'current_mA', 'voltage_V']
     gpioAvailable = False
     powerAvailable = False
 
@@ -318,48 +421,41 @@ def visualizeFlocklabTrace(resultPath):
     if os.path.isfile(gpioPath):
         # Read gpio data csv to pandas dataframe
         gpioDf = pd.read_csv(gpioPath)
-        # gpioDf.columns = ['timestamp'] + list(gpioDf.columns[1:])
-        gpioDf.rename(columns={'# timestamp': 'timestamp'},inplace=True)
+        # sanity check: column names
+        for col in requiredGpioCols:
+            if not col in gpioDf.columns:
+                raise Exception('ERROR: Required column ({}) in gpiotracing.csv file is missing.'.format(col))
 
         if len(gpioDf) > 0:
+            # sanity check node_id data type
+            if not 'int' in str(gpioDf.node_id.dtype):
+                raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
+
             gpioAvailable = True
     else:
         print('gpiotracing.csv could not be found!')
 
-    # figure out which data is available
-    if os.path.isfile(actutationPath):
-        # Read gpio data csv to pandas dataframe
-        actutationDf = pd.read_csv(actutationPath)
-        # actutationDf.columns = ['timestamp'] + list(actutationDf.columns[1:])
-        # print(actutationDf.head())
-        actutationDf.rename(columns={'timestamp_executed': 'timestamp'},inplace=True)
-        actutationDf.drop(['# timestamp_planned'], axis=1, inplace=True)
-        if gpioAvailable:
-            gpioDf = pd.concat([gpioDf, actutationDf])
-        elif len(actutationDf) > 0:
-            gpioDf = actutationDf
-            gpioAvailable = True
-        # print(gpioDf.head())
-    else:
-        print('gpioactuation.csv could not be found!')
-
     if os.path.isfile(powerPath):
         # Read power data csv to pandas dataframe
         powerDf = pd.read_csv(powerPath)
-        powerDf.rename(columns={'# timestamp': 'timestamp'},inplace=True)
+        # sanity check: column names
+        for col in requiredPowerCols:
+            if not col in powerDf.columns:
+                raise Exception('ERROR: Required column ({}) in powerprofiling.csv file is missing.'.format(col))
+
         if len(powerDf) > 0:
+            # sanity check node_id data type
+            if not 'int' in str(powerDf.node_id.dtype):
+                raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
+
             powerAvailable = True
     else:
         print('powerprofiling.csv could not be found!')
 
-    # if os.path.isfile(sigPath):
-    #     # Read power data csv to pandas dataframe
-    #     sigDf = pd.read_csv(powerPath)
-    #     sigDf.columns = ['timestamp'] + list(sigDf.columns[1:])
-    #     if len(sigDf) > 0:
-    #         powerAvailable = True
-    # else:
-    #     print('gpioactuation.csv could be found!')
+    # handle case where there is no data to plot
+    if (not gpioAvailable) and (not powerAvailable):
+        print('ERROR: No data for plotting available!')
+        sys.exit(1)
 
     # determine first timestamp (globally)
     minT = None
@@ -406,7 +502,11 @@ def visualizeFlocklabTrace(resultPath):
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
             # print(nodeId)
-            trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
+            trace = {
+              't': nodeGrp.timestampRelative.to_numpy(),
+              'i': nodeGrp['current_mA'].to_numpy(),
+              'v': nodeGrp['voltage_V'].to_numpy(),
+            }
             powerData.update({nodeId: trace})
 
 
@@ -426,8 +526,11 @@ def visualizeFlocklabTrace(resultPath):
     #         trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
     #         powerData.update({nodeId: trace})
 
-    output_file(os.path.join(os.getcwd(), "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
-    plotAll(gpioData, powerData, testNum=testNum)
+    if outputDir is None:
+        output_file(os.path.join(os.getcwd(), "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
+    else:
+        output_file(os.path.join(outputDir, "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
+    plotAll(gpioData, powerData, testNum=testNum, interactive=interactive)
 
 
 ###############################################################################
