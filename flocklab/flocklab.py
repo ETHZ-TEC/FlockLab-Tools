@@ -5,6 +5,7 @@ Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 
 import base64
 import os
+import stat
 import sys
 import requests
 import json
@@ -67,6 +68,7 @@ class Flocklab:
                     with open(flConfigPath, 'w') as f:
                         f.write('USER={}\n'.format(usr))
                         f.write('PASSWORD={}\n'.format(pwd))
+                    os.chmod(flConfigPath, stat.S_IRUSR | stat.S_IWUSR)
                     print("FlockLab authentication file successfully created!")
                 else:
                     print("ERROR: FlockLab authentication information seems wrong. No \'.flocklabauth\' file created!")
