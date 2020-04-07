@@ -97,6 +97,24 @@ class Flocklab:
         return ' '.join(obsList)
 
     @staticmethod
+    def apiStr2int(apiStr):
+        '''
+        Args:
+            apiStr: string to be converted to int or None
+        Returns:
+            object of converted string (int)
+        '''
+        if apiStr is None:
+            ret = None
+        else:
+            if apiStr.isnumeric():
+                ret = int(apiStr)
+            else:
+                ret = None
+        return ret
+
+
+    @staticmethod
     def getImageAsBase64(imagePath):
         '''
         Args:
@@ -146,7 +164,8 @@ class Flocklab:
         Args:
             xmlPath: path to FlockLab config xml file
         Returns:
-            Result of test creation as string
+            testId: Test ID returned from flocklab if successful, None otherwise
+            info: Result of test creation as string
         '''
         creds = self.getCredentials()
 
@@ -158,16 +177,19 @@ class Flocklab:
                 'xmlfile': (os.path.basename(xmlPath), open(xmlPath, 'rb').read(), 'text/xml', {}),
             }
             req = requests.post(self.apiBaseAddr + 'newtest.php', files=files, verify=self.sslVerify)
-            # FIXME: success is not correctly detected
-            ret = re.search('<!-- cmd --><p>(Test (Id [0-9]*) successfully added.)</p>', req.text)
+            ret = re.search('<!-- cmd --><p>(Test \(Id ([0-9]*)\) successfully added.)</p>', req.text)
             if ret is not None:
-                print('success')
-                return ret.group(1)
+                info = ret.group(1)
+                testId = ret.group(2)
             else:
-                return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
+                info = re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
+                testId = None
         except Exception as e:
             print(e)
-            print("Failed to contact the FlockLab API!")
+            info = 'Failed to contact the FlockLab API!'
+            testId = None
+
+        return testId, info
 
     def abortTest(self, testId):
         '''Abort a FlockLab test if it is running.
@@ -257,6 +279,37 @@ class Flocklab:
         except requests.exceptions.RequestException as e:
             print(e)
             print("Failed to contact the FlockLab API!")
+
+    def getTestInfo(self, testId):
+        '''Get information for an existing FlockLab test.
+        Args:
+            testId: ID of the test which should be delted
+        Returns:
+            Test info as a dict.
+        '''
+        creds = self.getCredentials()
+
+        # get observer list from server
+        try:
+            files = {
+                'username': (None, creds['username']),
+                'password': (None, creds['password']),
+                'q': (None, 'testinfo'),
+                'id': (None, testId),
+            }
+            req = requests.post(self.apiBaseAddr + 'api.php', files=files, verify=self.sslVerify)
+            output = json.loads(req.text)["output"]
+            # convert timestamps to int
+            output['start_planned'] = Flocklab.apiStr2int(output['start_planned'])
+            output['start'] = Flocklab.apiStr2int(output['start'])
+            output['end_planned'] = Flocklab.apiStr2int(output['end_planned'])
+            output['end'] = Flocklab.apiStr2int(output['end'])
+        except Exception as e:
+            print(e)
+            print("Failed to fetch test info from FlockLab API!")
+            output = None
+
+        return output
 
     def getObsIds(self, platform='dpp2lora'):
         '''Get currently available observer IDs (depends on user role!)

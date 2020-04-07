@@ -219,27 +219,29 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     }
 
     if (num_clicked_label.x==0) {
-    marker_start.visible=true
-    marker_start.location=cb_obj.x
-    box.left = cb_obj.x
-    setSpan("marker_start_span", cb_obj.x.toFixed(7) + " s")
-} else if (num_clicked_label.x==1) {
-    marker_end.location=cb_obj.x
-    marker_end.visible=true
-    box.right=cb_obj.x
-    box.visible=true
-    timediff = cb_obj.x - marker_start.location
-    setSpan("marker_end_span", cb_obj.x.toFixed(7) + " s")
-    setSpan("marker_diff_span", timediff.toFixed(7) + " s")
-} else if (num_clicked_label.x==2) {
-    marker_start.visible=false
-    marker_end.visible=false
-    box.visible=false
-    setSpan("marker_start_span", "   ")
-    setSpan("marker_end_span", "   ")
-    setSpan("marker_diff_span", "   ")
-}
-num_clicked_label.x = (num_clicked_label.x + 1) % 3
+        var startTime = cb_obj.x
+        marker_start.visible=true
+        marker_start.location=startTime
+        box.left = startTime
+        setSpan("marker_start_span", startTime.toFixed(7) + " s")
+    } else if (num_clicked_label.x==1) {
+        var endTime = cb_obj.x
+        marker_end.location=endTime
+        marker_end.visible=true
+        box.right=endTime
+        box.visible=true
+        timediff = endTime - marker_start.location
+        setSpan("marker_end_span", endTime.toFixed(7) + " s")
+        setSpan("marker_diff_span", timediff.toFixed(7) + " s")
+    } else if (num_clicked_label.x==2) {
+        marker_start.visible=false
+        marker_end.visible=false
+        box.visible=false
+        setSpan("marker_start_span", "   ")
+        setSpan("marker_end_span", "   ")
+        setSpan("marker_diff_span", "   ")
+    }
+    num_clicked_label.x = (num_clicked_label.x + 1) % 3
     '''
     marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
     marker_start.location = 5
