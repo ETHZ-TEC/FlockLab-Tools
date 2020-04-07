@@ -5,6 +5,7 @@ Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 
 import base64
 import os
+import sys
 import requests
 import json
 import re
@@ -32,15 +33,17 @@ class FlocklabError(Exception):
 
 
 class Flocklab:
-    def __init__(self):
-        self.apiBaseAddr = 'https://flocklab.ethz.ch/user/'
+    def __init__(self, apiBaseAddr=None):
+        if apiBaseAddr is None:
+            self.apiBaseAddr = 'https://flocklab.ethz.ch/user/'
+        else:
+            self.apiBaseAddr = apiBaseAddr
         self.sslVerify = True
 
     def setApiBaseAddr(self, addr):
         self.apiBaseAddr = addr
 
-    @staticmethod
-    def getCredentials():
+    def getCredentials(self):
         '''Feteches FlockLab credentials stored in .flocklabauth file
         Returns:
             Username & Password
@@ -60,13 +63,14 @@ class Flocklab:
                 usr = input("Username: ")
                 pwd = getpass(prompt='Password: ', stream=None)
                 # Test whether credentials are working
-                if Flocklab.getPlatforms(username=usr, password=pwd) is not None:
+                if self.getPlatforms(username=usr, password=pwd) is not None:
                     with open(flConfigPath, 'w') as f:
                         f.write('USER={}\n'.format(usr))
                         f.write('PASSWORD={}\n'.format(pwd))
                     print("FlockLab authentication file successfully created!")
                 else:
-                    print("WARNING: FlockLab authentication information seems wrong. No .flocklabauth file created!")
+                    print("ERROR: FlockLab authentication information seems wrong. No \'.flocklabauth\' file created!")
+                    sys.exit(1)
 
         try:
             with open(flConfigPath, "r") as configFile:
@@ -117,7 +121,7 @@ class Flocklab:
         Returns:
             Result of validation as string
         '''
-        creds = Flocklab.getCredentials()
+        creds = self.getCredentials()
 
         try:
             files = {
@@ -142,7 +146,7 @@ class Flocklab:
         Returns:
             Result of test creation as string
         '''
-        creds = Flocklab.getCredentials()
+        creds = self.getCredentials()
 
         try:
             files = {
@@ -170,7 +174,7 @@ class Flocklab:
         Returns:
             Result of abortion as string
         '''
-        creds = Flocklab.getCredentials()
+        creds = self.getCredentials()
 
         try:
             files = {
@@ -196,7 +200,7 @@ class Flocklab:
         Returns:
             Result of deletion as string
         '''
-        creds = Flocklab.getCredentials()
+        creds = self.getCredentials()
 
         try:
             files = {
@@ -222,7 +226,7 @@ class Flocklab:
         Returns:
             Success of download as string.
         '''
-        creds = Flocklab.getCredentials()
+        creds = self.getCredentials()
 
         try:
             headers = {
@@ -259,7 +263,7 @@ class Flocklab:
         Returns:
             List of accessible FlockLab observer IDs
         '''
-        creds = Flocklab.getCredentials()
+        creds = self.getCredentials()
 
         # get observer list from server
         try:
@@ -290,7 +294,7 @@ class Flocklab:
             List of available platforms on FlockLab
         '''
         if username is None or password is None:
-            creds = Flocklab.getCredentials()
+            creds = self.getCredentials()
         else:
             creds = {'username': username, 'password': password}
 
@@ -305,10 +309,10 @@ class Flocklab:
             platformList = json.loads(req.text)["output"].split(' ')
             return platformList
         except Exception as e:
-            print(e)
-            print("Failed to fetch active observers from FlockLab API!")
+            if username is None and password is None:
+                # print(e)
+                print("Failed to fetch platforms from FlockLab API!")
             return None
-
 
 
     @staticmethod

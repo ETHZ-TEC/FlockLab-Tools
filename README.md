@@ -15,7 +15,8 @@ Features:
 
 Dependencies:
 * `python3.6+`
-* `pip`
+* `setuptools`, `pkg_resources`, `pip`, `wheel` (usually pre-installed when using a virtual environment)
+* `rocketlogger` (optional, required if flocklab-tools is used to visualize test results containing powerprofiling data in the `rld` file format)
 
 Install with
 ```sh

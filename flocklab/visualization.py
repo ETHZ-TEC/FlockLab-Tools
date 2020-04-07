@@ -9,12 +9,13 @@ from collections import Counter, OrderedDict
 import itertools
 import os
 import sys
+import glob
 
 from bokeh.plotting import figure, show, save, output_file
-from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, TapTool, CustomJS, Div
+from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column, layout, Spacer
-from bokeh.models import Legend, Span, Label
+from bokeh.models import Legend, Span, Label, BoxAnnotation
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 from bokeh.events import Tap, DoubleTap, ButtonClick
 
@@ -97,6 +98,8 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     length = len(nodeData)
     vareas = []
     for i, (pin, pinData) in enumerate(nodeData.items()):
+        if not 't' in pinData.keys():
+            continue
         signalName = '{} (Node {})'.format(pin, nodeId)
         t, v, = trace2series(pinData['t'], pinData['v'])
         source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
@@ -191,6 +194,8 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     minT = np.inf
     for nodeData in gpioData.values():
         for pinData in nodeData.values():
+            if not 't' in pinData.keys():
+                continue
             pinMax = pinData['t'].max()
             pinMin = pinData['t'].min()
             if pinMax > maxT:
@@ -203,39 +208,53 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
 
     # time measuring with marker lines
-    js_click = ''' if (num_clicked[0]==0) {
-                        marker_start.visible=true
-                        marker_start.location=cb_obj.x
-                        first_val[0] = cb_obj.x
-                    } else if (num_clicked[0]==1) {
-                        marker_end.visible=true
-                        marker_end.location=cb_obj.x
-                        timediff = cb_obj.x - first_val[0]
-                        marker_label.x = cb_obj.x
-                        marker_label.y = cb_obj.y
-                        marker_label.text = timediff.toFixed(7) + " s"
-                        marker_label.visible=true
-                    } else if (num_clicked[0]==2) {
-                        marker_start.visible=false
-                        marker_end.visible=false
-                        marker_label.visible=false
-                    }
-                    num_clicked[0] = (num_clicked[0] + 1) % 3
+    js_click = '''
+    function setSpan(spanId, content) {
+        var span = document.getElementById(spanId);
+
+        while( span.firstChild ) {
+        span.removeChild( span.firstChild );
+        }
+        span.appendChild( document.createTextNode(content) );
+    }
+
+    if (num_clicked_label.x==0) {
+    marker_start.visible=true
+    marker_start.location=cb_obj.x
+    box.left = cb_obj.x
+    setSpan("marker_start_span", cb_obj.x.toFixed(7) + " s")
+} else if (num_clicked_label.x==1) {
+    marker_end.location=cb_obj.x
+    marker_end.visible=true
+    box.right=cb_obj.x
+    box.visible=true
+    timediff = cb_obj.x - marker_start.location
+    setSpan("marker_end_span", cb_obj.x.toFixed(7) + " s")
+    setSpan("marker_diff_span", timediff.toFixed(7) + " s")
+} else if (num_clicked_label.x==2) {
+    marker_start.visible=false
+    marker_end.visible=false
+    box.visible=false
+    setSpan("marker_start_span", "   ")
+    setSpan("marker_end_span", "   ")
+    setSpan("marker_diff_span", "   ")
+}
+num_clicked_label.x = (num_clicked_label.x + 1) % 3
     '''
-    num_clicked = [0] # needs to be a list (we need to pass a reference to an obj, int does not keep state)
-    first_val = [0]
     marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
     marker_start.location = 5
     marker_start.visible = False
     marker_end = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
     marker_end.location = 10
     marker_end.visible = False
-    marker_label = Label()
-    marker_label.x = 10
-    marker_label.y = 1
-    marker_label.x_offset = 10
-    marker_label.text = 'Test'
-    marker_label.visible = False
+    box = BoxAnnotation()
+    box.fill_color = 'grey'
+    box.fill_alpha = 0.1
+    box.visible = False
+    # dummy label for counting number of clicks (simple int or list does not work since state is not kept or state is not shared between plots)
+    num_clicked_label = Label()
+    num_clicked_label.x = 0
+    num_clicked_label.visible = False
 
     # plot gpio data
     gpioPlots = OrderedDict()
@@ -250,8 +269,8 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         # time measuring
         p.add_layout(marker_start)
         p.add_layout(marker_end)
-        p.add_layout(marker_label)
-        args = {'marker_start': marker_start, 'marker_end': marker_end, 'marker_label': marker_label, 'p': p, 'num_clicked': num_clicked, 'first_val': first_val}
+        p.add_layout(box)
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'num_clicked_label': num_clicked_label}
         p.js_on_event(Tap, CustomJS(args = args, code = js_click))
 
         # add functionality to reset by double-click
@@ -277,8 +296,8 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         # time measuring
         p.add_layout(marker_start)
         p.add_layout(marker_end)
-        p.add_layout(marker_label)
-        args = {'marker_start': marker_start, 'marker_end': marker_end, 'marker_label': marker_label, 'p': p, 'num_clicked': num_clicked, 'first_val': first_val}
+        p.add_layout(box)
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'p': p, 'num_clicked_label': num_clicked_label}
         p.js_on_event(Tap, CustomJS(args = args, code = js_click))
 
         # add functionality to reset by double-click
@@ -354,6 +373,50 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         # labelCol = column([labelDiv, spacer], sizing_mode='fixed')
         gridPlots.append([labelDiv, plotCol])
 
+    tooltipStyle = '''
+    <style>
+  .tooltip {
+    font-size: 18px;
+    position: relative;
+    display: inline-block;
+  }
+
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 220px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    top: 125%;
+    left: 50%;
+    margin-left: -110px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent #555 transparent;
+  }
+
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    font-size: 16px;
+    opacity: 1;
+  }
+  </style>
+    '''
+
     ## add plot for time scale
     labelDiv = Div(
         align='center',
@@ -372,15 +435,50 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     )
     # Add title
     titleDiv = Div(
-        text='<h2 style="margin:0">FlockLab Results - Test {testNum}</h2>'.format(testNum=testNum),
-        style={},
+        text='<h2 style="margin:0">FlockLab Test {testNum}</h2>'.format(testNum=testNum),
+        # style={'background-color': 'yellow',},
         height_policy='fit',
         width_policy='fit',
         align='center'
     )
+    spaceDiv = Div(
+        text='<div width="30px"></div>',
+        style={'background-color': 'yellow'},
+        width=60,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    measureDiv = Div(
+        text='''
+        <table>
+          <tr>
+            <th width="180px" align="left"><span style="padding: 2px;">&#9312;</span><span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_start_span">   </span></th>
+            <th width="180px" align="left"><span style="padding: 2px;">&#9313;</span><span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_end_span">   </span></th>
+            <th width="180px" align="left"><span style="padding: 2px;">&#916;</span><span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_diff_span">   </span></th>
+          </tr>
+        </table>
+        ''',
+        # style={'background-color': 'yellow'},
+        width=550,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    infoDiv = Div(
+        text='<div class="tooltip">&#9432;<span class="tooltiptext"><b>click</b>: time measure tool <br/>(set &#9312;/set &#9313;/clear)<br/><b>double-click</b>: reset plot</span></div>'+tooltipStyle,
+        # style={'background-color': 'yellow'},
+        width=30,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    titleLine = row(
+        [titleDiv, spaceDiv, measureDiv, infoDiv],
+        sizing_mode='scale_width',
+        align='start',
+        # align='center',
+    )
     # put together final layout of page
     finalLayout = column(
-        [titleDiv, grid],
+        [titleLine, grid],
         # [grid],
         sizing_mode='scale_both',
     )
@@ -412,14 +510,11 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
     resultPath = os.path.normpath(resultPath) # remove trailing slash if there is one
     testNum = os.path.basename(os.path.abspath(resultPath))
 
+    # try to read gpio tracing data
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
     requiredGpioCols = ['timestamp', 'node_id', 'pin_name', 'value']
-    powerPath = os.path.join(resultPath, 'powerprofiling.csv')
-    requiredPowerCols = ['timestamp', 'node_id', 'current_mA', 'voltage_V']
     gpioAvailable = False
-    powerAvailable = False
 
-    # figure out which data is available
     if os.path.isfile(gpioPath):
         # Read gpio data csv to pandas dataframe
         gpioDf = pd.read_csv(gpioPath)
@@ -437,6 +532,12 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
     else:
         print('gpiotracing.csv could not be found!')
 
+    # try to read power profiling data
+    powerPath = os.path.join(resultPath, 'powerprofiling.csv')
+    powerRldFiles = glob.glob(os.path.join(resultPath, './powerprofiling*.rld'))
+    requiredPowerCols = ['timestamp', 'node_id', 'current_mA', 'voltage_V']
+    powerAvailable = False
+
     if os.path.isfile(powerPath):
         # Read power data csv to pandas dataframe
         powerDf = pd.read_csv(powerPath)
@@ -451,8 +552,32 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
                 raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
 
             powerAvailable = True
+    elif powerRldFiles:
+        from rocketlogger.data import RocketLoggerData
+
+        powerDfList = []
+        for powerRldFile in powerRldFiles:
+            sp = os.path.basename(powerRldFile).split('.')
+            obsId = int(sp[1])
+            nodeId = int(sp[2])
+            tempDf = pd.DataFrame()
+            rld = RocketLoggerData(powerRldFile)
+            rld.merge_channels()
+            ts = rld.get_time(absolute_time=True, time_reference='network')
+            tempDf['timestamp'] = ts.astype('uint64') / 1e9   # convert to s
+            tempDf['observer_id'] = obsId
+            tempDf['node_id'] = nodeId
+            tempDf['current_mA'] = rld.get_data('I1') * 1e3 # convert to mA
+            tempDf['voltage_V'] = rld.get_data('V2') - rld.get_data('V1') # voltage difference
+            powerDfList.append(tempDf)
+
+        powerDf = pd.concat(powerDfList)
+        # import pdb
+        # pdb.set_trace()
+        if len(powerDf) > 0:
+            powerAvailable = True
     else:
-        print('powerprofiling.csv could not be found!')
+        print('powerprofiling data (\'.csv\' or \'.rld\') could not be found!')
 
     # handle case where there is no data to plot
     if (not gpioAvailable) and (not powerAvailable):
@@ -470,6 +595,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
 
     # prepare gpio data
     gpioData = OrderedDict()
+    pinOrdering = ['INT1', 'INT2', 'LED1', 'LED2', 'LED3', 'SIG1', 'SIG2']
     if gpioAvailable:
         gpioDf['timestampRelative'] = gpioDf.timestamp - minT
         gpioDf.sort_values(by=['node_id', 'pin_name', 'timestamp'], inplace=True)
@@ -484,10 +610,16 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
         for nodeId, nodeGrp in gpioDf.groupby('node_id'):
             # print(nodeId)
             nodeData = OrderedDict()
-            for pin, pinGrp in nodeGrp.groupby('pin_name'):
-                # print('  {}'.format(pin))
-                trace = {'t': pinGrp.timestampRelative.to_numpy(), 'v': pinGrp.value.to_numpy()}
-                nodeData.update({pin: trace})
+            pinGrps = nodeGrp.groupby('pin_name')
+            pinList = pinOrdering + list(set(pinGrps.groups.keys()) - set(pinOrdering))
+            # TODO: test with gpio tracing file with missin  pin
+            for pin in pinList:
+                if pin in pinGrps.groups.keys():
+                    pinGrp = pinGrps.get_group(pin)
+                    trace = {'t': pinGrp.timestampRelative.to_numpy(), 'v': pinGrp.value.to_numpy()}
+                    nodeData.update({pin: trace})
+                else:
+                    nodeData.update({pin: {}})
             gpioData.update({nodeId: nodeData})
 
 
@@ -501,7 +633,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
         powerNodeList = sorted(list(set(powerDf.node_id)))
         # print('powerNodeList:', powerNodeList)
 
-        # Generate gpioData dict from pandas dataframe
+        # Generate powerData dict from pandas dataframe
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
             # print(nodeId)
             trace = {
@@ -510,23 +642,6 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
               'v': nodeGrp['voltage_V'].to_numpy(),
             }
             powerData.update({nodeId: trace})
-
-
-    # # prepare sig data
-    # sigData = OrderedDict()
-    # if sigAvailable:
-    #     sigDf['timestampRelative'] = sigDf.timestamp - minT
-    #     sigDf.sort_values(by=['node_id', 'timestamp'], inplace=True)
-
-    #     # Get overview of available data
-    #     powerNodeList = sorted(list(set(sigDf.node_id)))
-    #     print('powerNodeList:', powerNodeList)
-
-    #     # Generate gpioData dict from pandas dataframe
-    #     for nodeId, nodeGrp in sigDf.groupby('node_id'):
-    #         print(nodeId)
-    #         trace = {'t': nodeGrp.timestampRelative.to_numpy(), 'v': nodeGrp['value_mA'].to_numpy()}
-    #         powerData.update({nodeId: trace})
 
     if outputDir is None:
         output_file(os.path.join(os.getcwd(), "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))

@@ -39,6 +39,7 @@ setuptools.setup(
         'bokeh',
         'requests',
         'appdirs',
+        'rocketlogger',
     ],
     classifiers=(
         "Programming Language :: Python :: 3",

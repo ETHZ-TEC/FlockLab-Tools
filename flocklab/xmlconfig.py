@@ -33,6 +33,12 @@ class FlocklabXmlConfig():
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
 
+    def extendTitle(title, num=71):
+        syms = (num - len(title))
+        uneven = '=' if syms % 2 else ''
+        syms = int(syms/2)
+        return '='*syms + title + uneven + '='*syms
+
     def addSubElement(parent, tag, text=None):
         e = et.SubElement(parent, tag)
         if text is not None:
@@ -105,7 +111,7 @@ class GeneralConf():
         if self.duration is None:
             raise Exception('ERROR: ndurationame of GeneralConf needs to be set!')
 
-        x.append(et.Comment('General configuration'))
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('General Configuration')))
         gc = FlocklabXmlConfig.addSubElement(x, 'generalConf')
         FlocklabXmlConfig.addSubElement(gc, 'name', text=self.name)
         if self.description is not None:
@@ -146,7 +152,7 @@ class TargetConf():
         if self.dbImagId is not None and self.embeddedImageId is not None:
             raise Exception('ERROR: Only one image can be specified per TargetConf object (dbImagId OR embeddedImageId)!')
 
-        x.append(et.Comment('Target configuration'))
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('Target Configuration')))
         tc = FlocklabXmlConfig.addSubElement(x, 'targetConf')
         FlocklabXmlConfig.addSubElement(tc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
         if self.targetIds is not None:
@@ -172,7 +178,7 @@ class SerialConf():
         if self.remoteIp is None:
             self.remoteIp = '0.0.0.0' # useless for forwarding but prevents problems with gpiotracing if by default an IPv6 address is set
 
-        x.append(et.Comment('Serial Service configuration'))
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('Serial Configuration')))
         sc = FlocklabXmlConfig.addSubElement(x, 'serialConf')
         FlocklabXmlConfig.addSubElement(sc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
         if self.port is not None:
@@ -193,43 +199,47 @@ class GpioTracingConf():
         if self.pinList is None:
             raise Exception('ERROR: pinList of GpioTracingConf needs to be set!')
 
-        x.append(et.Comment('Target configuration'))
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('GPIO Tracing Configuration')))
         gtc = FlocklabXmlConfig.addSubElement(x, 'gpioTracingConf')
         FlocklabXmlConfig.addSubElement(gtc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
         FlocklabXmlConfig.addSubElement(gtc, 'pins', text=' '.join(self.pinList))
         return x
 
 class GpioActuationConf():
-    gpioActuationConf = \
-    '''
-    <!-- GPIO Actuation Service configuration -->
-    <gpioActuationConf>
-        <obsIds>{obsIds}</obsIds>
-        <pinConf>
-            <pin>SIG1</pin>
-            <level>{levelSig1}</level>
-            <relativeTime>
-                <offsetSecs>0</offsetSecs>
-            </relativeTime>
-        </pinConf>
-        <pinConf>
-            <pin>SIG2</pin>
-            <level>{levelSig2}</level>
-            <relativeTime>
-                <offsetSecs>0</offsetSecs>
-            </relativeTime>
-        </pinConf>
-    </gpioActuationConf>
-    '''
-
-    def __init__(self, obsIds=None, levelSig1=None, levelSig2=None):
+    def __init__(self, obsIds=None, pinConfList=None):
         self.obsIds = obsIds
-        self.levelSig1 = levelSig1
-        self.levelSig2 = levelSig2
+        self.pinConfList = pinConfList
 
     def config2Et(self, x):
-        # TODO
+        if self.obsIds is None:
+            raise Exception('ERROR: obsIds of GpioTracingConf needs to be set!')
+        if self.pinConfList is None:
+            raise Exception('ERROR: pinConfList of GpioTracingConf needs to be set')
+        if type(self.pinConfList) == list:
+            if len(self.pinConfList) == 0:
+                raise Exception('ERROR: pinConfList of GpioTracingConf cannot be empty')
+        elif type(self.pinConfList) == dict:
+            self.pinConfList = [self.pinConfList]
+        for pinConf in self.pinConfList:
+            if type(pinConf) != dict:
+                raise Exception('ERROR: element of pinConfList must be of type \'dict\'!')
+            if len(set(pinConf.keys()).intersection(set(['pin', 'level', 'offset']))) != 3:
+                raise Exception('ERROR: pinConfList must be a dict containing items \'pin\', \'level\', and \'offset\' values!')
+
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('GPIO Actuation Configuration')))
+        gtc = FlocklabXmlConfig.addSubElement(x, 'gpioActuationConf')
+        FlocklabXmlConfig.addSubElement(gtc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
+        for pinConf in self.pinConfList:
+            pinConfXml = FlocklabXmlConfig.addSubElement(gtc, 'pinConf')
+            if pinConf['level'] == 1:
+                pinConf['level'] = 'high'
+            elif pinConf['level'] == 0:
+                pinConf['level'] = 'low'
+            FlocklabXmlConfig.addSubElement(pinConfXml, 'pin', text='{}'.format(pinConf['pin']))
+            FlocklabXmlConfig.addSubElement(pinConfXml, 'level', text='{}'.format(pinConf['level']))
+            FlocklabXmlConfig.addSubElement(pinConfXml, 'offset', text='{}'.format(pinConf['offset']))
         return x
+
 
 class EmbeddedImageConf():
     def __init__(self, embeddedImageId=None, imageName=None, imageDescription=None, imagePlatform=None, imagePath=None, core=None):
@@ -257,7 +267,7 @@ class EmbeddedImageConf():
             # Read image from file
             self.imageString = Flocklab.getImageAsBase64(self.imagePath)
 
-        x.append(et.Comment('Image configuration'))
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('Embedded Image Configuration')))
         ic = FlocklabXmlConfig.addSubElement(x, 'embeddedImageConf')
         FlocklabXmlConfig.addSubElement(ic, 'embeddedImageId', text='{}'.format(self.embeddedImageId))
         FlocklabXmlConfig.addSubElement(ic, 'name', text='{}'.format(self.name))
@@ -283,12 +293,12 @@ class PowerProfilingConf():
         if self.duration is None:
             raise Exception('ERROR: duration of PowerProfilingConf needs to be set!')
 
-        x.append(et.Comment('Power Profiling Service configuration'))
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('Power Profiling Configuration')))
         pc = FlocklabXmlConfig.addSubElement(x, 'powerProfilingConf')
         FlocklabXmlConfig.addSubElement(pc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
         FlocklabXmlConfig.addSubElement(pc, 'offset', text='{}'.format(self.offset))
         FlocklabXmlConfig.addSubElement(pc, 'duration', text='{}'.format(self.duration))
-        FlocklabXmlConfig.addSubElement(pc, 'samplingRate', text='{}'.format(self.samplingRate))
+        FlocklabXmlConfig.addSubElement(pc, 'samplingRate', text='{}'.format(int(self.samplingRate)))
         FlocklabXmlConfig.addSubElement(pc, 'fileFormat', text='{}'.format(self.fileFormat))
         return x
 
@@ -301,7 +311,7 @@ class DebugConf():
         if self.obsIds is None:
             raise Exception('ERROR: obsIds of DebugConf needs to be set!')
 
-        x.append(et.Comment('Debug configuration'))
+        x.append(et.Comment(FlocklabXmlConfig.extendTitle('Debug Configuration')))
         dc = FlocklabXmlConfig.addSubElement(x, 'debugConf')
         FlocklabXmlConfig.addSubElement(dc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
         FlocklabXmlConfig.addSubElement(dc, 'gdbPort', text='{}'.format(self.gdbPort))
