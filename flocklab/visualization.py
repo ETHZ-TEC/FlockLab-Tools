@@ -256,7 +256,6 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         setSpan("marker_end_span", "   ")
         setSpan("marker_diff_span", "   ")
     }
-    //num_clicked_label.x = (num_clicked_label.x + 1) % 3
     '''
     marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
     marker_start.location = 5
@@ -268,10 +267,6 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     box.fill_color = 'grey'
     box.fill_alpha = 0.1
     box.visible = False
-    # dummy label for counting number of clicks (simple int or list does not work since state is not kept or state is not shared between plots)
-    num_clicked_label = Label()
-    num_clicked_label.x = 0
-    num_clicked_label.visible = False
 
     # plot gpio data
     gpioPlots = OrderedDict()
@@ -287,7 +282,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         p.add_layout(marker_start)
         p.add_layout(marker_end)
         p.add_layout(box)
-        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'num_clicked_label': num_clicked_label}
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box}
         p.js_on_event(Tap, CustomJS(args = args, code = js_click))
 
         # add functionality to reset by double-click
@@ -314,7 +309,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         p.add_layout(marker_start)
         p.add_layout(marker_end)
         p.add_layout(box)
-        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'p': p, 'num_clicked_label': num_clicked_label}
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'p': p}
         p.js_on_event(Tap, CustomJS(args = args, code = js_click))
 
         # add functionality to reset by double-click
