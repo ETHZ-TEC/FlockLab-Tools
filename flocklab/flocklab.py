@@ -7,6 +7,7 @@ import base64
 import os
 import stat
 import sys
+import time
 import requests
 import json
 import re
@@ -190,6 +191,24 @@ class Flocklab:
             testId = None
 
         return testId, info
+
+    def createTestWithInfo(self, xmlPath):
+        '''Create a FlockLab test by using the web api and return a string with info about test start and ID
+        Args:
+            xmlPath: path to FlockLab config xml file
+        Returns:
+            info: Test ID and start date or info about failure
+        '''
+        testId, info = self.createTest(xmlPath)
+        if not testId:
+            ret = 'ERROR: Creation of test failed!\n{}'.format(info)
+        else:
+            try:
+                testinfo = self.getTestInfo(testId=testId)
+                ret = 'Test {} was successfully added and is scheduled to start at {} (local time)'.format(testId, datetime.datetime.fromtimestamp((testinfo['start_planned'])))
+            except Exception as e:
+                ret = 'Test {} was successfully added. (Test start time could not be fetched.)'.format(testId)
+        return ret
 
     def abortTest(self, testId):
         '''Abort a FlockLab test if it is running.

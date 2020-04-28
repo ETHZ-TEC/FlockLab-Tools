@@ -46,17 +46,7 @@ def main():
     if args.validate is not None:
         print(fl.xmlValidate(args.validate))
     elif args.create is not None:
-        testId, info = fl.createTest(args.create)
-        if not testId:
-            print('ERROR: Creation of test failed!')
-            print(info)
-        else:
-            try:
-                testinfo = fl.getTestInfo(testId=testId)
-                print( 'Test {} was successfully added and is scheduled to start at {} (local time)'.format(testId, datetime.fromtimestamp((testinfo['start_planned']))) )
-            except Exception as e:
-                print( 'Test {} was successfully added. (Test start time could not be fetched.)'.format(testId) )
-
+        print(fl.createTestWithInfo(args.create))
     elif args.abort is not None:
         print(fl.abortTest(args.abort))
     elif args.delete is not None:

@@ -102,7 +102,7 @@ class GeneralConf():
         self.description = description
         self.custom = custom               # must be of type str
         self.duration = duration           # in secs
-        self.startTime = startTime         # datetime in UTC time; if None -> test will be scheduled using asap
+        self.startTime = startTime         # datetime object in UTC time; if None -> test will be scheduled using asap
         self.emailResults = emailResults   # boolean, will be converted
 
     def config2Et(self, x):
@@ -120,18 +120,14 @@ class GeneralConf():
             if type(self.custom) != str:
                 raise Exception('ERROR: type of custom of generalConf must be of type str!')
             FlocklabXmlConfig.addSubElement(gc, 'custom', text=self.custom)
-        if self.startTime is None:
-            scheduleAsap = FlocklabXmlConfig.addSubElement(gc, 'scheduleAsap')
-            FlocklabXmlConfig.addSubElement(scheduleAsap, 'durationSecs', text='{}'.format(self.duration))
-        else:
+        schedule = FlocklabXmlConfig.addSubElement(gc, 'schedule')
+        FlocklabXmlConfig.addSubElement(schedule, 'duration', text='{}'.format(self.duration))
+        if self.startTime is not None:
             if type(self.startTime) != datetime.datetime:
                 raise Exception('ERROR: startTime of generalConf must be of type datetime.datetime!')
-            endTime = self.startTime + datetime.timedelta(seconds=self.duration)
-            scheduleAbsolute = FlocklabXmlConfig.addSubElement(gc, 'scheduleAbsolute')
             # format YYYY-mm-ddTHH:MM:SSZ
             format = "%Y-%m-%dT%H:%M:%SZ"
-            FlocklabXmlConfig.addSubElement(scheduleAbsolute, 'start', text=self.startTime.strftime(format))
-            FlocklabXmlConfig.addSubElement(scheduleAbsolute, 'end', text=endTime.strftime(format))
+            FlocklabXmlConfig.addSubElement(schedule, 'start', text=self.startTime.strftime(format))
         if self.emailResults is not None:
             FlocklabXmlConfig.addSubElement(gc, 'emailResults', text='yes' if self.emailResults else 'no')
         return x

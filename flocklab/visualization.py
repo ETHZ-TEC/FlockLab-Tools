@@ -23,10 +23,10 @@ from bokeh.events import Tap, DoubleTap, ButtonClick
 ###############################################################################
 
 def addLinkedCrosshairs(plots):
-    js_move = '''   start_x = plot.x_range.start
-                    end_x = plot.x_range.end
-                    start_y = plot.y_range.start
-                    end_y = plot.y_range.end
+    js_move = '''   var start_x = plot.x_range.start
+                    var end_x = plot.x_range.end
+                    var start_y = plot.y_range.start
+                    var end_y = plot.y_range.end
                     if(cb_obj.x>=start_x && cb_obj.x<=end_x && cb_obj.y>=start_y && cb_obj.y<=end_y) {
                         cross.spans.height.computed_location=cb_obj.sx
                     }
@@ -62,8 +62,10 @@ def colorMapping(pin):
 
 def trace2series(t, v):
     tNew = np.repeat(t, 2, axis=0)
-    # repeat invert and interleave
-    vInv = [0 if e==1.0 else 1 for e in v]
+    # repeat and invert
+    vInv = [0 if e else 1 for e in v]
+    # assume first value is 0 always
+    vInv[0] = 0
     # interleave
     vNew = np.vstack((vInv, v)).reshape((-1,),order='F')
 
@@ -79,6 +81,10 @@ def trace2series(t, v):
             vNewNew.append(np.nan)
     tNewNew = np.asarray(tNewNew)
     vNewNew = np.asarray(vNewNew)
+
+    # add 0 at the end of each trace (to make sure that hover is available on last edge of varea of real signal edge)
+    tNewNew = np.append(tNewNew, tNewNew[-1])
+    vNewNew = np.append(vNewNew, 0)
 
     return (tNewNew, vNewNew)
 
@@ -218,22 +224,31 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         span.appendChild( document.createTextNode(content) );
     }
 
-    if (num_clicked_label.x==0) {
+    function calcAndDisplayDiff() {
+        box.visible=true
+        var timediff = marker_end.location - marker_start.location
+        setSpan("marker_diff_span", timediff.toFixed(7) + " s")
+    }
+
+    if (document.getElementById('marker1').style.color=='black') {
         var startTime = cb_obj.x
         marker_start.visible=true
         marker_start.location=startTime
         box.left = startTime
         setSpan("marker_start_span", startTime.toFixed(7) + " s")
-    } else if (num_clicked_label.x==1) {
+        if (marker_end.visible) {
+            calcAndDisplayDiff();
+        }
+    } else if (document.getElementById('marker2').style.color=='black') {
         var endTime = cb_obj.x
         marker_end.location=endTime
         marker_end.visible=true
         box.right=endTime
-        box.visible=true
-        timediff = endTime - marker_start.location
         setSpan("marker_end_span", endTime.toFixed(7) + " s")
-        setSpan("marker_diff_span", timediff.toFixed(7) + " s")
-    } else if (num_clicked_label.x==2) {
+        if (marker_start.visible) {
+            calcAndDisplayDiff();
+        }
+    } else {
         marker_start.visible=false
         marker_end.visible=false
         box.visible=false
@@ -241,7 +256,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         setSpan("marker_end_span", "   ")
         setSpan("marker_diff_span", "   ")
     }
-    num_clicked_label.x = (num_clicked_label.x + 1) % 3
+    //num_clicked_label.x = (num_clicked_label.x + 1) % 3
     '''
     marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
     marker_start.location = 5
@@ -385,7 +400,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
 
   .tooltip .tooltiptext {
     visibility: hidden;
-    width: 220px;
+    width: 300px;
     background-color: #555;
     color: #fff;
     text-align: center;
@@ -454,9 +469,34 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         text='''
         <table>
           <tr>
-            <th width="180px" align="left"><span style="padding: 2px;">&#9312;</span><span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_start_span">   </span></th>
-            <th width="180px" align="left"><span style="padding: 2px;">&#9313;</span><span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_end_span">   </span></th>
-            <th width="180px" align="left"><span style="padding: 2px;">&#916;</span><span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_diff_span">   </span></th>
+            <th width="20px" align="left">
+              <span id="marker1" style="padding: 2px; cursor:default; color:grey; font-size: 25px;" onclick="(function() {
+                if (document.getElementById('marker1').style.color == 'grey') {
+                    document.getElementById('marker1').style.color='black';
+                }
+                else if (document.getElementById('marker1').style.color == 'black') {
+                    document.getElementById('marker1').style.color='grey';
+                }
+                document.getElementById('marker2').style.color='grey';
+                })();">&#9312;</span>
+            <th width="180px" align="left">
+              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_start_span">   </span></th>
+            <th width="20px" align="left">
+              <span id="marker2" style="padding: 2px; cursor:default; color:grey; font-size: 25px;"  onclick="(function() {
+                if (document.getElementById('marker2').style.color == 'grey') {
+                    document.getElementById('marker2').style.color='black';
+                }
+                else if (document.getElementById('marker2').style.color == 'black') {
+                    document.getElementById('marker2').style.color='grey';
+                }
+                document.getElementById('marker1').style.color='grey';
+                })();">&#9313;</span>
+            <th width="180px" align="left">
+              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_end_span">   </span></th>
+            <th width="20px" align="left">
+              <span style="padding: 2px; cursor:default; color:grey; font-size: 25px;">&#916;</span>
+            <th width="180px" align="left">
+              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_diff_span">   </span></th>
           </tr>
         </table>
         ''',
@@ -466,8 +506,12 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         height_policy='fit',
     )
     infoDiv = Div(
-        text='<div class="tooltip">&#9432;<span class="tooltiptext"><b>click</b>: time measure tool <br/>(set &#9312;/set &#9313;/clear)<br/><b>double-click</b>: reset plot</span></div>'+tooltipStyle,
-        # style={'background-color': 'yellow'},
+        text='''<table>
+          <tr>
+            <td align="left">
+              <div class="tooltip" style="vetical-align:middle; cursor:default; color:grey">&#9432;<span class="tooltiptext"><b>Set marker</b>:<br/>enable &#9312; or &#9313; + click into plot<br/><b>Remove markers</b>:<br/>disable &#9312; and &#9313; + click into plot<br/><b>Reset plot</b>:<br/>double-click inside plot</span></div>
+          </tr>
+        </table>{}'''.format(tooltipStyle),
         width=30,
         width_policy='fixed',
         height_policy='fit',
