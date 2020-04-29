@@ -9,7 +9,8 @@ Features:
 * Visualization of FlockLab test results
 
 [PyPi Webpage](https://pypi.org/project/flocklab-tools/)  
-[Source Code](https://gitlab.ethz.ch/tec/public/flocklab/flocklab-tools)
+[Source Code](https://gitlab.ethz.ch/tec/public/flocklab/flocklab-tools)  
+[Changelog](https://gitlab.ethz.ch/tec/public/flocklab/flocklab-tools/-/blob/master/CHANGELOG.md)
 
 ## Installation
 
