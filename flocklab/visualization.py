@@ -10,6 +10,7 @@ import itertools
 import os
 import sys
 import glob
+from copy import copy
 
 from bokeh.plotting import figure, show, save, output_file
 from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
@@ -18,6 +19,8 @@ from bokeh.layouts import gridplot, row, column, layout, Spacer
 from bokeh.models import Legend, Span, Label, BoxAnnotation
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 from bokeh.events import Tap, DoubleTap, ButtonClick
+
+from .flocklab import FlocklabError
 
 
 ###############################################################################
@@ -79,12 +82,10 @@ def trace2series(t, v):
         if (vNew[i] == 0 and vNew[i+1] == 0):
             tNewNew.append(tNew[i])
             vNewNew.append(np.nan)
+    tNewNew.append(tNew[-1])
+    vNewNew.append(vNew[-1])
     tNewNew = np.asarray(tNewNew)
     vNewNew = np.asarray(vNewNew)
-
-    # add 0 at the end of each trace (to make sure that hover is available on last edge of varea of real signal edge)
-    tNewNew = np.append(tNewNew, tNewNew[-1])
-    vNewNew = np.append(vNewNew, 0)
 
     return (tNewNew, vNewNew)
 
@@ -532,7 +533,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
 
 
 
-def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
+def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPps=False, showRst=False):
     '''Plots FlockLab results using bokeh.
     Args:
         resultPath: path to the flocklab results (unzipped)
@@ -636,31 +637,38 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False):
 
     # prepare gpio data
     gpioData = OrderedDict()
-    pinOrdering = ['INT1', 'INT2', 'LED1', 'LED2', 'LED3', 'SIG1', 'SIG2']
+    pinOrdering = ['INT1', 'INT2', 'LED1', 'LED2', 'LED3', 'SIG1', 'SIG2', 'PPS', 'nRST']
     if gpioAvailable:
         gpioDf['timestampRelative'] = gpioDf.timestamp - minT
         gpioDf.sort_values(by=['node_id', 'pin_name', 'timestamp'], inplace=True)
-
-        # Get overview of available data
-        gpioNodeList = sorted(list(set(gpioDf.node_id)))
-        gpioPinList = sorted(list(set(gpioDf.pin_name)))
-        # print('gpioNodeList:', gpioNodeList)
-        # print('gpioPinList:', gpioPinList)
+        # determine global end of gpio trace (for adding edge back to 0 at the end of trace for signals which end with 1)
+        tEnd = gpioDf[(gpioDf.pin_name=='nRST') & (gpioDf.value==0)].timestampRelative.to_numpy()[-1]
 
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in gpioDf.groupby('node_id'):
             # print(nodeId)
+            pinList = copy(pinOrdering)
             nodeData = OrderedDict()
             pinGrps = nodeGrp.groupby('pin_name')
-            pinList = pinOrdering + list(set(pinGrps.groups.keys()) - set(pinOrdering))
-            # TODO: test with gpio tracing file with missin  pin
+            if not set(pinGrps.groups.keys()).issubset(set(pinOrdering)):
+                raise FlocklabError('ERROR: GPIO tracing file contains unknown pin names!')
+            if not showRst:
+                pinList.remove('nRST')
+            if not showPps:
+                pinList.remove('PPS')
             for pin in pinList:
                 if pin in pinGrps.groups.keys():
                     pinGrp = pinGrps.get_group(pin)
-                    trace = {'t': pinGrp.timestampRelative.to_numpy(), 'v': pinGrp.value.to_numpy()}
-                    nodeData.update({pin: trace})
-                else:
-                    nodeData.update({pin: {}})
+                    # check if pin is ever toggled to 1 in the whole GPIO tracing (all nodes)
+                    if (gpioDf[(gpioDf.pin_name==pin)].value==1).any():
+                        t = pinGrp.timestampRelative.to_numpy()
+                        v = pinGrp.value.to_numpy()
+                        if len(v):
+                            if v[-1] == 1:
+                                t = np.append(t, tEnd)
+                                v = np.append(v, 0)
+                        trace = {'t': t, 'v': v}
+                        nodeData.update({pin: trace})
             gpioData.update({nodeId: nodeData})
 
 

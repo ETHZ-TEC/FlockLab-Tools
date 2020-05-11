@@ -110,7 +110,7 @@ python -m pip install -e .
 You can edit the source files and the module will reflect the changes automatically (the `-e` option which means _editable install_).
 
 ## License & Copyright
-Licensed under the term of MIT License (MIT). See file [LICENSE](LICENSE).
+This project is licensed under the BSD-3-Clause license. For details, see the  [LICENSE](https://gitlab.ethz.ch/tec/public/flocklab/flocklab-tools/-/blob/master/LICENSE) file.
 
 Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 

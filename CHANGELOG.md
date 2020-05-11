@@ -43,3 +43,8 @@ Initial version
   * fixed missing edge and hover on last signal edge
 * xml config
   * updated xml generation to latest FlockLab 2 interface (schedule block)
+
+## Version 0.2.3 (xx.xx.xxxx)
+* visualization
+  * disabled plotting of nRST and PPS signal by default & added CLI option (-y) to plot it anyway
+  * omitting plotting of GPIO signals which are never HIGH in the whole test on all nodes
