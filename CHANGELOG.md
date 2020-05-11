@@ -44,7 +44,8 @@ Initial version
 * xml config
   * updated xml generation to latest FlockLab 2 interface (schedule block)
 
-## Version 0.2.3 (xx.xx.xxxx)
+## Version 0.2.3 (11.05.2020)
 * visualization
+  * fix: instruct pandas to not sacrifice accuracy for the sake of speed
   * disabled plotting of nRST and PPS signal by default & added CLI option (-y) to plot it anyway
   * omitting plotting of GPIO signals which are never HIGH in the whole test on all nodes

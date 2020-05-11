@@ -558,8 +558,8 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
     gpioAvailable = False
 
     if os.path.isfile(gpioPath):
-        # Read gpio data csv to pandas dataframe
-        gpioDf = pd.read_csv(gpioPath)
+        # Read gpio data csv to pandas dataframe (instruct pandas with float_precision to not sacrifice accuracy for the sake of speed)
+        gpioDf = pd.read_csv(gpioPath, float_precision='round_trip')
         # sanity check: column names
         for col in requiredGpioCols:
             if not col in gpioDf.columns:
@@ -581,8 +581,8 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
     powerAvailable = False
 
     if os.path.isfile(powerPath):
-        # Read power data csv to pandas dataframe
-        powerDf = pd.read_csv(powerPath)
+        # Read power data csv to pandas dataframe (instruct pandas with float_precision to not sacrifice accuracy for the sake of speed)
+        powerDf = pd.read_csv(powerPath, float_precision='round_trip')
         # sanity check: column names
         for col in requiredPowerCols:
             if not col in powerDf.columns:
