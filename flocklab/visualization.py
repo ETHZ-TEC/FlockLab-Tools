@@ -109,7 +109,8 @@ def plotObserverGpio(nodeId, nodeData, pOld):
             continue
         signalName = '{} (Node {})'.format(pin, nodeId)
         t, v, = trace2series(pinData['t'], pinData['v'])
-        source = ColumnDataSource(dict(x=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
+        t_abs, v_dummy, = trace2series(pinData['tAbs'], pinData['v'])
+        source = ColumnDataSource(dict(x=t, t_abs=t_abs, y1=np.zeros_like(v)+length-i, y2=v+length-i))
         # plot areas
         vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin))
         varea = p.add_glyph(source, vareaGlyph, name=signalName)
@@ -124,7 +125,11 @@ def plotObserverGpio(nodeId, nodeData, pOld):
 
 
     hover = p.select(dict(type=HoverTool))
-    hover.tooltips = OrderedDict([('Time', '@x{0.0000000} s'),('Signal','$name')])
+    hover.tooltips = OrderedDict([
+        ('Time (rel)', '@x{0.0000000} s'),
+        ('Time (abs)', '@t_abs{0.0000000} s'),
+        ('Signal','$name')
+    ])
 
     p.xgrid.grid_line_color = None
     p.ygrid.grid_line_color = None
@@ -176,7 +181,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
     p.add_glyph(source, line_p, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
     hover.tooltips = OrderedDict([
-      ('Time', '@t{0.00000000} s'),
+      ('Time (rel)', '@t{0.00000000} s'),
       ('V', '@v{0.000000} V'),
       ('I', '@i{0.000000} mA'),
       ('Power', '@p{0.000000} mW'),
@@ -643,6 +648,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
         gpioDf.sort_values(by=['node_id', 'pin_name', 'timestamp'], inplace=True)
         # determine global end of gpio trace (for adding edge back to 0 at the end of trace for signals which end with 1)
         tEnd = gpioDf[(gpioDf.pin_name=='nRST') & (gpioDf.value==0)].timestampRelative.to_numpy()[-1]
+        tAbsEnd = gpioDf[(gpioDf.pin_name=='nRST') & (gpioDf.value==0)].timestamp.to_numpy()[-1]
 
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in gpioDf.groupby('node_id'):
@@ -662,12 +668,14 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
                     # check if pin is ever toggled to 1 in the whole GPIO tracing (all nodes)
                     if (gpioDf[(gpioDf.pin_name==pin)].value==1).any():
                         t = pinGrp.timestampRelative.to_numpy()
+                        tAbs = pinGrp.timestamp.to_numpy()
                         v = pinGrp.value.to_numpy()
                         if len(v):
                             if v[-1] == 1:
                                 t = np.append(t, tEnd)
+                                tAbs = np.append(tAbs, tAbsEnd)
                                 v = np.append(v, 0)
-                        trace = {'t': t, 'v': v}
+                        trace = {'t': t, 'tAbs': tAbs, 'v': v}
                         nodeData.update({pin: trace})
             gpioData.update({nodeId: nodeData})
 
