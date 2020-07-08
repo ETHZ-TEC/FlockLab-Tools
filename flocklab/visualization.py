@@ -624,7 +624,8 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
         if len(powerDf) > 0:
             powerAvailable = True
     else:
-        print('powerprofiling data (\'.csv\' or \'.rld\') could not be found!')
+        # print('powerprofiling data (\'.csv\' or \'.rld\') could not be found!')
+        pass
 
     # handle case where there is no data to plot
     if (not gpioAvailable) and (not powerAvailable):
