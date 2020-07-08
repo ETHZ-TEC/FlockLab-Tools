@@ -5,6 +5,7 @@ Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
 
 import base64
 import os
+import sys
 import requests
 import json
 import re
@@ -44,31 +45,40 @@ def main():
     args = parser.parse_args()
 
     fl = Flocklab()
+    ret = ''
     if args.validate is not None:
-        print(fl.xmlValidate(args.validate))
+        ret = fl.xmlValidate(args.validate)
     elif args.create is not None:
-        print(fl.createTestWithInfo(args.create))
+        ret = fl.createTestWithInfo(args.create)
     elif args.abort is not None:
-        print(fl.abortTest(args.abort))
+        ret = fl.abortTest(args.abort)
     elif args.delete is not None:
-        print(fl.deleteTest(args.delete))
+        ret = fl.deleteTest(args.delete)
     elif args.info is not None:
-        print(fl.getTestInfo(args.info))
+        ret = fl.getTestInfo(args.info)
     elif args.get is not None:
-        print(fl.getResults(args.get))
+        ret = fl.getResults(args.get)
     elif args.fetch is not None:
-        # print(fl.festResults(args.fetch))
-        print('Sorry, this feature is not yet implemented!')
+        # ret = fl.festResults(args.fetch)
+        ret = 'Sorry, this feature is not yet implemented!'
     elif args.observers is not None:
-        print(fl.getObsIds(args.observers))
+        ret = fl.getObsIds(args.observers)
     elif args.platforms:
-        print(fl.getPlatforms())
+        ret = fl.getPlatforms()
     elif args.visualize is not None:
         visualizeFlocklabTrace(resultPath=args.visualize, interactive=True, showPps=args.develop, showRst=args.develop)
     elif args.version:
-        print(__version__)
+        ret = __version__
     else:
         parser.print_help()
+
+    if type(ret) == str:
+        if ret != '':
+            print(ret)
+            if 'ERROR' in ret:
+                sys.exit(1)
+            else:
+                sys.exit(0)
 
 ################################################################################
 

@@ -82,7 +82,7 @@ class Flocklab:
                 password = re.search(r'PASSWORD=(.+)', text).group(1)
                 return {'username': username, 'password': password}
         except:
-            print("Failed to read flocklab auth info from %s \n"
+            print("ERROR: Failed to read flocklab auth info from %s \n"
                   "Please create the file and provide at least one line with USER=your_username and one line with PASSWORD=your_password \n"
                   "See https://gitlab.ethz.ch/tec/public/flocklab/wikis/flocklab-cli#setting-it-up for more info!"%flConfigPath)
 
@@ -133,7 +133,7 @@ class Flocklab:
 
                 return encoded_string
         except FileNotFoundError:
-            print("Failed to read and convert image!")
+            print("ERROR: Failed to read and convert image!")
 
     def xmlValidate(self, xmlPath):
         '''Validate FlockLab config xml by using the web api
@@ -153,12 +153,12 @@ class Flocklab:
             }
             req = requests.post(self.apiBaseAddr + 'xmlvalidate.php', files=files, verify=self.sslVerify)
             if '<p>The file validated correctly.</p>' in req.text:
-                return 'The file validated correctly.'
+                info = 'The file validated correctly.'
             else:
-                return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
+                info = re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
         except Exception as e:
-            print(e)
-            print("Failed to contact the FlockLab API!")
+            info = "{}\nERROR: Failed to contact the FlockLab API!".format(e)
+        return info
 
     def createTest(self, xmlPath):
         '''Create a FlockLab test by using the web api
@@ -187,7 +187,7 @@ class Flocklab:
                 testId = None
         except Exception as e:
             print(e)
-            info = 'Failed to contact the FlockLab API!'
+            info = 'ERROR: Failed to contact the FlockLab API!'
             testId = None
 
         return testId, info
@@ -234,7 +234,7 @@ class Flocklab:
                 return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
         except Exception as e:
             print(e)
-            print("Failed to contact the FlockLab API!")
+            print("ERROR: Failed to contact the FlockLab API!")
 
     def deleteTest(self, testId):
         '''Delete a FlockLab test.
@@ -260,7 +260,7 @@ class Flocklab:
                 return re.search(r'<!-- cmd -->(.*)<!-- cmd -->', req.text).group(1)
         except Exception as e:
             print(e)
-            print("Failed to contact the FlockLab API!")
+            print("ERROR: Failed to contact the FlockLab API!")
 
     def getResults(self, testId):
         '''Download FlockLab test results via https.
@@ -270,12 +270,14 @@ class Flocklab:
             Success of download as string.
         '''
         creds = self.getCredentials()
+        req = None
 
+        # download test result archive
+        print("downloading ...")
         try:
             headers = {
                 'Content-Type': 'application/x-www-form-urlencoded',
             }
-
             data = {
                   'testid': '{}'.format(testId),
                   'query': 'get',
@@ -283,21 +285,24 @@ class Flocklab:
                   'password': creds['password']
             }
             req = requests.post(self.apiBaseAddr + 'result_download_archive.php', headers=headers, data=data, verify=self.sslVerify)
-            if req.status_code == 200:
-                if '"error"' in req.text:
-                    output = json.loads(req.text)["output"]
-                    raise FlocklabError('Failed: {}'.format(output))
-                else:
-                    with open('flocklab_testresults_{}.tar.gz'.format(testId), 'wb') as f:
-                        f.write(req.content)
-                    with tarfile.open('flocklab_testresults_{}.tar.gz'.format(testId)) as tar:
-                        tar.extractall()
-                    return 'Successfully downloaded & extracted: flocklab_testresults_{}.tar.gz & {}'.format(testId, testId)
-            else:
-                raise FlocklabError('Downloading testresults failed (status code: {})'.format(req.status_code))
         except requests.exceptions.RequestException as e:
             print(e)
-            print("Failed to contact the FlockLab API!")
+            print("ERROR: Failed to contact the FlockLab API!")
+
+        if req:
+            if req.status_code != 200:
+                raise FlocklabError('Downloading testresults failed (status code: {})'.format(req.status_code))
+
+            if '"error"' in req.text:
+                output = json.loads(req.text)["output"]
+                raise FlocklabError('FlockLab API Error: {}'.format(output))
+
+            with open('flocklab_testresults_{}.tar.gz'.format(testId), 'wb') as f:
+                f.write(req.content)
+            print("extracting archive ...")
+            with tarfile.open('flocklab_testresults_{}.tar.gz'.format(testId)) as tar:
+                tar.extractall()
+            return 'Successfully downloaded & extracted: flocklab_testresults_{}.tar.gz & {}'.format(testId, testId)
 
     def getTestInfo(self, testId):
         '''Get information for an existing FlockLab test.
@@ -325,7 +330,7 @@ class Flocklab:
             output['end'] = Flocklab.apiStr2int(output['end'])
         except Exception as e:
             print(e)
-            print("Failed to fetch test info from FlockLab API!")
+            print("ERROR: Failed to fetch test info from FlockLab API!")
             output = None
 
         return output
@@ -357,7 +362,7 @@ class Flocklab:
                 return []
         except Exception as e:
             print(e)
-            print("Failed to fetch active observers from FlockLab API!")
+            print("ERROR: Failed to fetch active observers from FlockLab API!")
 
     def getPlatforms(self, username=None, password=None):
         '''Get currently available observer IDs (depends on user role!)
@@ -385,7 +390,7 @@ class Flocklab:
         except Exception as e:
             if username is None and password is None:
                 # print(e)
-                print("Failed to fetch platforms from FlockLab API!")
+                print("ERROR: Failed to fetch platforms from FlockLab API!")
             return None
 
 
