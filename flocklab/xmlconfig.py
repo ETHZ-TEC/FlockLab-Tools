@@ -162,10 +162,11 @@ class TargetConf():
         return x
 
 class SerialConf():
-    def __init__(self, obsIds=None, port='serial', baudrate=115200, remoteIp=None):
+    def __init__(self, obsIds=None, port='serial', baudrate=None, cpuSpeed=None, remoteIp=None):
         self.obsIds = obsIds
         self.port = port
         self.baudrate = baudrate
+        self.cpuSpeed = cpuSpeed
         self.remoteIp = remoteIp
 
     def config2Et(self, x):
@@ -179,8 +180,14 @@ class SerialConf():
         FlocklabXmlConfig.addSubElement(sc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
         if self.port is not None:
             FlocklabXmlConfig.addSubElement(sc, 'port', text='{}'.format(self.port))
-        if self.baudrate is not None:
-            FlocklabXmlConfig.addSubElement(sc, 'baudrate', text='{}'.format(self.baudrate))
+            if self.baudrate is not None and self.port == 'serial':
+                FlocklabXmlConfig.addSubElement(sc, 'baudrate', text='{}'.format(self.baudrate))
+            elif self.cpuSpeed is not None and self.port == 'swo':
+                FlocklabXmlConfig.addSubElement(sc, 'cpuSpeed', text='{}'.format(self.cpuSpeed))
+            elif self.port == 'usb':
+                pass
+            else:
+                raise Exception('ERROR: Invalid serial config!')
         FlocklabXmlConfig.addSubElement(sc, 'remoteIp', text=self.remoteIp)
         return x
 
@@ -299,18 +306,44 @@ class PowerProfilingConf():
         return x
 
 class DebugConf():
-    def __init__(self, obsIds=None, gdbPort=2331):
+    def __init__(self, obsIds=None, gdbPort=None, cpuSpeed=None, dataTraceConfList=None):
+        '''
+        Args:
+            obsIds: List of observer IDs where debug service should be activated
+            gdbPort: GDB server port for connecting from remote
+            dataTraceConf: List of dataTraceConf tuples (variable, mode)
+        '''
         self.obsIds = obsIds
         self.gdbPort = gdbPort
+        self.cpuSpeed = cpuSpeed
+        self.dataTraceConfList = dataTraceConfList
 
     def config2Et(self, x):
         if self.obsIds is None:
             raise Exception('ERROR: obsIds of DebugConf needs to be set!')
+        if not (self.gdbPort == 2331 or self.gdbPort is None):
+            raise Exception('ERROR: obsIds of DebugConf needs to be set!')
+        if not (self.dataTraceConfList is None):
+            if len(self.dataTraceConfList) > 4:
+                raise Exception('ERROR: Too many dataTraceConf elements in dataTraceConfList (max is 4)!')
+            for dtconf in self.dataTraceConfList:
+                if len(dtconf) == 0 or len(dtconf) > 2:
+                    raise Exception('ERROR: dataTraceConf element has a wrong format!')
 
         x.append(et.Comment(FlocklabXmlConfig.extendTitle('Debug Configuration')))
         dc = FlocklabXmlConfig.addSubElement(x, 'debugConf')
         FlocklabXmlConfig.addSubElement(dc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
-        FlocklabXmlConfig.addSubElement(dc, 'gdbPort', text='{}'.format(self.gdbPort))
+        if self.gdbPort:
+            FlocklabXmlConfig.addSubElement(dc, 'gdbPort', text='{}'.format(self.gdbPort))
+        if self.cpuSpeed:
+            FlocklabXmlConfig.addSubElement(dc, 'cpuSpeed', text='{}'.format(self.cpuSpeed))
+        if self.dataTraceConfList:
+            for dtconf in self.dataTraceConfList:
+                dtconfElem = FlocklabXmlConfig.addSubElement(dc, 'dataTraceConf')
+                FlocklabXmlConfig.addSubElement(dtconfElem, 'variable', text='{}'.format(dtconf[0]))
+                if len(dtconf) == 2:
+                    FlocklabXmlConfig.addSubElement(dtconfElem, 'mode', text='{}'.format(dtconf[1]))
+
         return x
 
 ###############################################################################
