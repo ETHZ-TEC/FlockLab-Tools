@@ -97,7 +97,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         # plot_width=1200,
         plot_height=900,
         min_border=0,
-        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen
@@ -162,7 +162,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
         # plot_width=1200,
         plot_height=900,
         min_border=0,
-        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen
@@ -338,7 +338,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         x_range=lastPlot.x_range,
         plot_height=0,
         min_border=0,
-        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'save', 'reset'],
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         height_policy='fit',
