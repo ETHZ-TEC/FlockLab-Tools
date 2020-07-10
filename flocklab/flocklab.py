@@ -412,11 +412,12 @@ class Flocklab:
 
         with open(serialFilename, 'r', encoding='utf-8', errors='replace') as f:
             ll = []
+            header_processed = False
             for line in f.readlines():
-                print(line)
-                if line[0] == '#': # special processing of header
-                    cols = line[2:].rstrip().split(',')
+                if not header_processed:
+                    cols = line.rstrip().split(',')
                     assert len(cols) == 5
+                    header_processed = True
                     continue
                 parts = line.rstrip().split(',')
                 if len(parts) > 0:
