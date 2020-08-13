@@ -59,3 +59,4 @@ Initial version
 * xml config
   * added support for dataTraceConf
   * added support for cpuSpeed element in serial config (required for swo mode in serial tracing)
+  * automatically ceil duration of generalConf since only integers are allowed

@@ -10,6 +10,7 @@ import itertools
 import datetime
 import os
 from xml.etree import ElementTree as et
+from math import ceil
 
 from . import Flocklab
 
@@ -121,7 +122,7 @@ class GeneralConf():
                 raise Exception('ERROR: type of custom of generalConf must be of type str!')
             FlocklabXmlConfig.addSubElement(gc, 'custom', text=self.custom)
         schedule = FlocklabXmlConfig.addSubElement(gc, 'schedule')
-        FlocklabXmlConfig.addSubElement(schedule, 'duration', text='{}'.format(self.duration))
+        FlocklabXmlConfig.addSubElement(schedule, 'duration', text='{}'.format(ceil(self.duration)))
         if self.startTime is not None:
             if type(self.startTime) != datetime.datetime:
                 raise Exception('ERROR: startTime of generalConf must be of type datetime.datetime!')
