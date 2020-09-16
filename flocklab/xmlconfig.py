@@ -323,7 +323,7 @@ class DebugConf():
         if self.obsIds is None:
             raise Exception('ERROR: obsIds of DebugConf needs to be set!')
         if not (self.gdbPort == 2331 or self.gdbPort is None):
-            raise Exception('ERROR: obsIds of DebugConf needs to be set!')
+            raise Exception('ERROR: invalid value for gdbPort!')
         if not (self.dataTraceConfList is None):
             if len(self.dataTraceConfList) > 4:
                 raise Exception('ERROR: Too many dataTraceConf elements in dataTraceConfList (max is 4)!')
