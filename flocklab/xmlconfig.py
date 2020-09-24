@@ -328,7 +328,7 @@ class DebugConf():
             if len(self.dataTraceConfList) > 4:
                 raise Exception('ERROR: Too many dataTraceConf elements in dataTraceConfList (max is 4)!')
             for dtconf in self.dataTraceConfList:
-                if len(dtconf) == 0 or len(dtconf) > 2:
+                if len(dtconf) == 0 or len(dtconf) > 3:
                     raise Exception('ERROR: dataTraceConf element has a wrong format!')
 
         x.append(et.Comment(FlocklabXmlConfig.extendTitle('Debug Configuration')))
@@ -342,8 +342,10 @@ class DebugConf():
             for dtconf in self.dataTraceConfList:
                 dtconfElem = FlocklabXmlConfig.addSubElement(dc, 'dataTraceConf')
                 FlocklabXmlConfig.addSubElement(dtconfElem, 'variable', text='{}'.format(dtconf[0]))
-                if len(dtconf) == 2:
+                if len(dtconf) >= 2:
                     FlocklabXmlConfig.addSubElement(dtconfElem, 'mode', text='{}'.format(dtconf[1]))
+                if len(dtconf) >= 3:
+                    FlocklabXmlConfig.addSubElement(dtconfElem, 'size', text='{}'.format(dtconf[2]))
 
         return x
 
