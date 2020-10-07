@@ -13,7 +13,7 @@ import glob
 from copy import copy
 
 from bokeh.plotting import figure, show, save, output_file
-from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div
+from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div, Select
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column, layout, Spacer
 from bokeh.models import Legend, Span, Label, BoxAnnotation
@@ -101,6 +101,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen
+        # output_backend="webgl",
     )
     length = len(nodeData)
     vareas = []
@@ -166,6 +167,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen
+        # output_backend="webgl",
     )
     source = ColumnDataSource(dict(
       t=nodeData['t'],
@@ -343,6 +345,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         active_scroll='xwheel_zoom',
         height_policy='fit',
         width_policy='fit',
+        # output_backend="webgl",
     )
     source = ColumnDataSource(dict(x=[0, maxT], y1=[0, 0], y2=[0, 0]))
     vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
@@ -411,7 +414,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     z-index: 1;
     top: 125%;
     left: 50%;
-    margin-left: -110px;
+    margin-left: -150px;
     opacity: 0;
     transition: opacity 0.3s;
   }
@@ -459,10 +462,24 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         width_policy='fit',
         align='center'
     )
-    spaceDiv = Div(
+    spaceDiv1 = Div(
         text='<div width="30px"></div>',
         style={'background-color': 'yellow'},
-        width=60,
+        width=50,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    spaceDiv2 = Div(
+        text='<div width="30px"></div>',
+        style={'background-color': 'yellow'},
+        width=30,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    spaceDiv3 = Div(
+        text='<div width="30px"></div>',
+        style={'background-color': 'yellow'},
+        width=30,
         width_policy='fixed',
         height_policy='fit',
     )
@@ -510,18 +527,62 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         text='''<table>
           <tr>
             <td align="left">
-              <div class="tooltip" style="vetical-align:middle; cursor:default; color:grey">&#9432;<span class="tooltiptext"><b>Set marker</b>:<br/>enable &#9312; or &#9313; + click into plot<br/><b>Remove markers</b>:<br/>disable &#9312; and &#9313; + click into plot<br/><b>Reset plot</b>:<br/>double-click inside plot</span></div>
+              <div class="tooltip" style="vertical-align:middle; cursor:default; color:grey; font-size: 20px; padding: 2px;">&#9432;<span class="tooltiptext"><b>Set marker</b>:<br/>enable &#9312; or &#9313; + click into plot<br/><b>Remove markers</b>:<br/>disable &#9312; and &#9313; + click into plot<br/><b>Reset plot</b>:<br/>double-click inside plot</span></div>
           </tr>
         </table>{}'''.format(tooltipStyle),
         width=30,
         width_policy='fixed',
         height_policy='fit',
     )
+    zoomLut = OrderedDict([
+        ('Quick Zoom', None),
+        ('fit trace', None),
+        ('1h', 3600),
+        ('10m', 600),
+        ('1m', 60),
+        ('10s', 10),
+        ('1s', 1),
+        ('100ms', 100e-3),
+        ('10ms', 10e-3),
+        ('1ms', 1e-3),
+        ('100us', 100e-6),
+        ('10us', 10e-6),
+        ('1us', 1e-6),
+    ])
+    zoomSelect = Select(
+        # title='Zoom ',
+        options=list(zoomLut.keys()),
+        width=120,
+        width_policy='fixed',
+        height_policy='fit',
+    )
+    zoomSelectCallback = CustomJS(
+        args={
+            'zoomLut': zoomLut,
+            'resetStr': list(zoomLut.keys())[0],
+            'p': pTime,
+            'zoomSelect': zoomSelect,
+        },
+        code="""
+        // console.log(cb_obj.value);
+        if (cb_obj.value == resetStr) {
+            // do nothing
+        } else if (cb_obj.value == "fit trace") {
+            p.reset.emit();
+        } else {
+            var start = p.x_range.getv('start');
+            var end = start + zoomLut[cb_obj.value];
+            p.x_range.setv({"start": start, "end": end});
+        }
+        // reset drop-down
+        zoomSelect.value = resetStr;
+        """,
+    )
+    zoomSelect.js_on_change('value', zoomSelectCallback)
     titleLine = row(
-        [titleDiv, spaceDiv, measureDiv, infoDiv],
+        [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, zoomSelect],
         sizing_mode='scale_width',
         align='start',
-        # align='center',
     )
     # put together final layout of page
     finalLayout = column(

@@ -53,6 +53,7 @@ Initial version
 ## Version 0.2.4 (xx.xx.2020)
 * visualization
   * added absolute time to hover info of gpio plots
+  * added Quick Zoom functionality (select zoom level from drop-down)
 * xmlValidate now returns value (string) if execution fails
 * CLI
   * return exit status 1 if command failed
