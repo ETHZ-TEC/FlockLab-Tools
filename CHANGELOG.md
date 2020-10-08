@@ -50,7 +50,7 @@ Initial version
   * disabled plotting of nRST and PPS signal by default & added CLI option (-y) to plot it anyway
   * omitting plotting of GPIO signals which are never HIGH in the whole test on all nodes
 
-## Version 0.2.4 (xx.xx.2020)
+## Version 0.2.4 (08.10.2020)
 * visualization
   * added absolute time to hover info of gpio plots
   * added Quick Zoom functionality (select zoom level from drop-down)
