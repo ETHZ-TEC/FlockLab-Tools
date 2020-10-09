@@ -62,3 +62,7 @@ Initial version
   * added support for cpuSpeed element in serial config (required for swo mode in serial tracing)
   * automatically ceil duration of generalConf since only integers are allowed
   * fixed error message for gdbPort
+
+## Version 0.2.5 (xx.xx.xxxx)
+* visualization
+  * quickzoom: changed zoom center to the middle of the plot, added centerline option

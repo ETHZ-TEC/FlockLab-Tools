@@ -217,9 +217,9 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
             if pinMin < minT:
                 minT = pinMin
 
-
     vline_start = Span(location=minT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
     vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
+    vline_middle = Span(location=0, dimension='height', line_color=(25,25,25,0.4), line_width=2, location_units='screen', render_mode='canvas', visible=False)
 
     # time measuring with marker lines
     js_click = '''
@@ -282,9 +282,10 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     for nodeId, nodeData in gpioData.items():
         p = plotObserverGpio(nodeId, nodeData, pOld=p)
 
-        # adding a start and end line
+        # adding vlines
         p.add_layout(vline_start)
         p.add_layout(vline_end)
+        p.add_layout(vline_middle)
 
         # time measuring
         p.add_layout(marker_start)
@@ -309,9 +310,10 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     for nodeId, nodeData in powerData.items():
         p = plotObserverPower(nodeId, nodeData, pOld=p)
 
-        # adding a start and end line
+        # adding vlines
         p.add_layout(vline_start)
         p.add_layout(vline_end)
+        p.add_layout(vline_middle)
 
         # time measuring
         p.add_layout(marker_start)
@@ -536,6 +538,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     )
     zoomLut = OrderedDict([
         ('Quick Zoom', None),
+        ('toggle centerline', None),
         ('fit trace', None),
         ('1h', 3600),
         ('10m', 600),
@@ -560,20 +563,27 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         args={
             'zoomLut': zoomLut,
             'resetStr': list(zoomLut.keys())[0],
+            'toggleCenterLineStr': list(zoomLut.keys())[1],
+            'fitTraceStr': list(zoomLut.keys())[2],
             'p': pTime,
             'zoomSelect': zoomSelect,
+            'vSpanMiddle': vline_middle,
         },
         code="""
         // console.log(cb_obj.value);
         if (cb_obj.value == resetStr) {
             // do nothing
-        } else if (cb_obj.value == "fit trace") {
+        } else if (cb_obj.value == toggleCenterLineStr) {
+            vSpanMiddle.visible = !vSpanMiddle.visible;
+        } else if (cb_obj.value == fitTraceStr) {
             p.reset.emit();
         } else {
-            var start = p.x_range.getv('start');
-            var end = start + zoomLut[cb_obj.value];
+            var middle = 1/2*(p.x_range.getv('end') + p.x_range.getv('start'));
+            var start = middle - 1/2*zoomLut[cb_obj.value];
+            var end = middle + 1/2*zoomLut[cb_obj.value];
             p.x_range.setv({"start": start, "end": end});
         }
+        vSpanMiddle.location = 1/2*(p.inner_width);
         // reset drop-down
         zoomSelect.value = resetStr;
         """,
@@ -584,6 +594,20 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         sizing_mode='scale_width',
         align='start',
     )
+
+    # make sure centerline stays in center if window is resized
+    updateCenterlineCallback = CustomJS(
+        args={
+            'p': pTime,
+            'vSpanMiddle': vline_middle,
+        },
+        code="""
+        vSpanMiddle.location = 1/2*(p.inner_width);
+        """,
+    )
+    # FIXME: currently resizing the window with double-clicking the frame (to toggle between fullscreen and windowed) does not trigger a inner_width change
+    p.js_on_change('inner_width', updateCenterlineCallback)
+
     # put together final layout of page
     finalLayout = column(
         [titleLine, grid],
