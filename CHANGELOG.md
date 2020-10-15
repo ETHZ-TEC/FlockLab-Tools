@@ -66,3 +66,4 @@ Initial version
 ## Version 0.2.5 (xx.xx.xxxx)
 * visualization
   * quickzoom: changed zoom center to the middle of the plot, added centerline option
+  * added buttons to enable/disable plots

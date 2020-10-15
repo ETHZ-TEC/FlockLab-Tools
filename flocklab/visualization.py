@@ -13,7 +13,7 @@ import glob
 from copy import copy
 
 from bokeh.plotting import figure, show, save, output_file
-from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div, Select
+from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div, Select, CheckboxButtonGroup
 from bokeh.models.glyphs import VArea, Line
 from bokeh.layouts import gridplot, row, column, layout, Spacer
 from bokeh.models import Legend, Span, Label, BoxAnnotation
@@ -589,8 +589,66 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         """,
     )
     zoomSelect.js_on_change('value', zoomSelectCallback)
+
+    datatracePlots = {} # FIXME
+    serviceNames = []
+    if gpioPlots:
+        serviceNames.append("GPIO")
+    if powerPlots:
+        serviceNames.append("PWR")
+    if datatracePlots:
+        serviceNames.append("DT")
+    serviceMap = dict([(name, serviceNames.index(name)) for name in serviceNames])
+    checkboxServices = CheckboxButtonGroup(labels=serviceNames, active=list(range(len(serviceNames))))
+    checkboxServices.js_on_change('active', CustomJS(
+        args={
+            'gpioPlots': gpioPlots,
+            'powerPlots': powerPlots,
+            'datatracePlots': datatracePlots,
+            'serviceMap': serviceMap,
+        },
+        code="""
+            // GPIO plots
+            console.log(serviceMap)
+            if ('GPIO' in serviceMap) {
+                for (var nodeId in gpioPlots) {
+                    gpioPlots[nodeId].visible = this.active.includes(serviceMap['GPIO']);
+                }
+            }
+            // Power plots
+            if ('PWR' in serviceMap) {
+                for (var nodeId in powerPlots) {
+                    powerPlots[nodeId].visible = this.active.includes(serviceMap['PWR']);
+                }
+            }
+            // Datatrace plots
+            if ('DT' in serviceMap) {
+                for (var nodeId in datatracePlots) {
+                    datatracePlots[nodeId].visible = this.active.includes(serviceMap['DT']);
+                }
+            }
+        """
+    ))
+
+    nodeIds = list(set(gpioData).union(powerData))
+    checkboxNodes = CheckboxButtonGroup(labels=[str(nodeId) for nodeId in nodeIds], active=list(range(len(nodeIds))))
+    checkboxNodes.js_on_change('active', CustomJS(
+        args={
+            'nodeIds': nodeIds,
+            'gridPlots': gridPlots,
+        },
+        code="""
+            console.log('checkboxNodes changed:', this.active);
+            for (var i=0; i<nodeIds.length; i++) {
+                gridPlots[i][0].visible = this.active.includes(i);
+                gridPlots[i][1].visible = this.active.includes(i);
+            }
+        """
+    ))
+    # FIXME: add checkboxes for GPIO lines
+
     titleLine = row(
-        [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, zoomSelect],
+        [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, zoomSelect, checkboxServices, checkboxNodes],
         sizing_mode='scale_width',
         align='start',
     )
