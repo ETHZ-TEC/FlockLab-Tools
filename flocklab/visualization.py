@@ -25,20 +25,22 @@ from .flocklab import FlocklabError
 ###############################################################################
 
 def addLinkedCrosshairs(plots):
-    js_move = '''   var start_x = plot.x_range.start
-                    var end_x = plot.x_range.end
-                    var start_y = plot.y_range.start
-                    var end_y = plot.y_range.end
-                    if(cb_obj.x>=start_x && cb_obj.x<=end_x && cb_obj.y>=start_y && cb_obj.y<=end_y) {
-                        cross.spans.height.computed_location=cb_obj.sx
-                    }
-                    else {
-                        cross.spans.height.computed_location = null
-                    }'''
-                    # if(cb_obj.y>=start && cb_obj.y<=end && cb_obj.x>=start && cb_obj.x<=end)
-                    #     { cross.spans.width.computed_location=cb_obj.sy  }
-                    # else { cross.spans.width.computed_location=null }
-                    # '''
+    js_move = '''
+        var start_x = plot.x_range.start
+        var end_x = plot.x_range.end
+        var start_y = plot.y_range.start
+        var end_y = plot.y_range.end
+        if(cb_obj.x>=start_x && cb_obj.x<=end_x && cb_obj.y>=start_y && cb_obj.y<=end_y) {
+            cross.spans.height.computed_location=cb_obj.sx
+        }
+        else {
+            cross.spans.height.computed_location = null
+        }
+    '''
+        # if(cb_obj.y>=start && cb_obj.y<=end && cb_obj.x>=start && cb_obj.x<=end)
+        #     { cross.spans.width.computed_location=cb_obj.sy  }
+        # else { cross.spans.width.computed_location=null }
+    # '''
     js_leave = '''cross.spans.height.computed_location=null; cross.spans.width.computed_location=null'''
 
     for currPlot in plots:
@@ -88,11 +90,11 @@ def trace2series(t, v):
 
     return (tNewNew, vNewNew)
 
-def plotObserverGpio(nodeId, nodeData, pOld, absoluteTimeFormatter):
+def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     colors = ['blue', 'red', 'green', 'orange']
     p = figure(
         title=None,
-        x_range=pOld.x_range if pOld is not None else None,
+        x_range=prevPlot.x_range if prevPlot is not None else None,
         # plot_width=1200,
         plot_height=900,
         min_border=0,
@@ -144,10 +146,10 @@ def plotObserverGpio(nodeId, nodeData, pOld, absoluteTimeFormatter):
 
     return p
 
-def plotObserverPower(nodeId, nodeData, pOld, absoluteTimeFormatter):
+def plotObserverPower(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     p = figure(
         title=None,
-        x_range=pOld.x_range if pOld is not None else None,
+        x_range=prevPlot.x_range if prevPlot is not None else None,
         # plot_width=1200,
         plot_height=900,
         min_border=0,
@@ -192,10 +194,10 @@ def plotObserverPower(nodeId, nodeData, pOld, absoluteTimeFormatter):
 
     return p
 
-def plotObserverDatatrace(nodeId, nodeData, pOld, absoluteTimeFormatter):
+def plotObserverDatatrace(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     p = figure(
         title=None,
-        x_range=pOld.x_range if pOld is not None else None,
+        x_range=prevPlot.x_range if prevPlot is not None else None,
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
@@ -235,7 +237,7 @@ def plotObserverDatatrace(nodeId, nodeData, pOld, absoluteTimeFormatter):
     return p
 
 def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, interactive=False):
-    # determine max timestamp value
+    # determine gpio limits of timestamp value (for vertical lines)
     maxT = 0
     minT = np.inf
     for nodeData in gpioData.values():
@@ -249,12 +251,74 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
             if pinMin < minT:
                 minT = pinMin
 
+    ## plot all plots
+    allPlots = []
+
+    # plot gpio data
+    gpioPlots = OrderedDict()
+    p = None
+    for nodeId, nodeData in gpioData.items():
+        p = plotObserverGpio(nodeId, nodeData, prevPlot=p, absoluteTimeFormatter=absoluteTimeFormatter)
+        gpioPlots.update( {nodeId: p} )
+    allPlots += list(gpioPlots.values())
+
+    # plot power data
+    powerPlots = OrderedDict()
+    prevPlot = allPlots[-1] if allPlots else None
+    for nodeId, nodeData in powerData.items():
+        p = plotObserverPower(nodeId, nodeData, prevPlot=prevPlot, absoluteTimeFormatter=absoluteTimeFormatter)
+        powerPlots.update( {nodeId: p} )
+    allPlots += list(powerPlots.values())
+
+    # plot datatrace data
+    datatracePlots = OrderedDict()
+    prevPlot = allPlots[-1] if allPlots else None
+    for nodeId, nodeData in datatraceData.items():
+        p = plotObserverDatatrace(nodeId, nodeData, prevPlot=prevPlot, absoluteTimeFormatter=absoluteTimeFormatter)
+        datatracePlots.update( {nodeId: p} )
+    allPlots += list(datatracePlots.values())
+
+    ## time scale axis: create linked dummy plot to get shared x axis without scaling height of bottom most plot
+    # figure out last plot for linking x-axis
+    prevPlot = allPlots[-1] if allPlots else None
+    timePlot = figure(
+        title=None,
+        x_range=prevPlot.x_range,
+        plot_height=0,
+        min_border=0,
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
+        active_scroll='xwheel_zoom',
+        height_policy='fit',
+        width_policy='fit',
+        # output_backend="webgl",
+    )
+    source = ColumnDataSource(dict(x=[0, maxT], y1=[0, 0], y2=[0, 0]))
+    vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
+    timePlot.add_glyph(source, vareaGlyph)
+    timePlot.xgrid.grid_line_color = None
+    timePlot.ygrid.grid_line_color = None
+    timePlot.yaxis.visible = False
+    allPlots += [timePlot]
+
+    # arrange all plots in grid and render it
+    createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum, (minT, maxT), interactive=interactive)
+
+def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum, gpioLimits, interactive=False):
+    '''arrange all plots in grid, add tools, and render it
+    '''
+    allPlots = list(gpioPlots.values()) + list(powerPlots.values()) + list(datatracePlots.values()) + [timePlot]
+    # determine all nodeIds
+    allNodeIds = sorted(list(set(list(gpioPlots.keys()) + list(powerPlots.keys()) + list(datatracePlots.keys()))))
+
     # FIXME: handle case where no gpio data is available
-    vline_start = Span(location=minT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
-    vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
+    # vertical line for start and end of test
+    vline_start = Span(location=gpioLimits[0], dimension='height', line_color=(25,25,25,0.1), line_width=3)
+    vline_end = Span(location=gpioLimits[1], dimension='height', line_color=(25,25,25,0.1), line_width=3)
+    # vertical line for quickzoom
     vline_middle = Span(location=0, dimension='height', line_color=(25,25,25,0.4), line_width=2, location_units='screen', render_mode='canvas', visible=False)
 
-    # time measuring with marker lines
+    ## measure time: add objects for measuring time with marker lines
     js_click = '''
     function setSpan(spanId, content) {
         var span = document.getElementById(spanId);
@@ -298,134 +362,39 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
         setSpan("marker_diff_span", "   ")
     }
     '''
-    marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
-    marker_start.location = 5
-    marker_start.visible = False
-    marker_end = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
-    marker_end.location = 10
-    marker_end.visible = False
-    box = BoxAnnotation()
-    box.fill_color = 'grey'
-    box.fill_alpha = 0.1
-    box.visible = False
-    # FIXME: rename box, use something more expressive
+    mt_marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
+    mt_marker_start.location = 5
+    mt_marker_start.visible = False
+    mt_marker_end = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
+    mt_marker_end.location = 10
+    mt_marker_end.visible = False
+    mt_box = BoxAnnotation()
+    mt_box.fill_color = 'grey'
+    mt_box.fill_alpha = 0.1
+    mt_box.visible = False
 
-    ## plot gpio data
-    gpioPlots = OrderedDict()
-    p = None
-    for nodeId, nodeData in gpioData.items():
-        p = plotObserverGpio(nodeId, nodeData, pOld=p, absoluteTimeFormatter=absoluteTimeFormatter)
-
+    ## add tools and utils to all plots
+    for p in allPlots:
         # adding vlines
         p.add_layout(vline_start)
         p.add_layout(vline_end)
         p.add_layout(vline_middle)
 
         # time measuring
-        p.add_layout(marker_start)
-        p.add_layout(marker_end)
-        p.add_layout(box)
-        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box}
+        p.add_layout(mt_marker_start)
+        p.add_layout(mt_marker_end)
+        p.add_layout(mt_box)
+        args = {'marker_start': mt_marker_start, 'marker_end': mt_marker_end, 'box': mt_box, 'p': p}
         p.js_on_event(Tap, CustomJS(args = args, code = js_click))
 
         # add functionality to reset by double-click
         p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
 
-        gpioPlots.update( {nodeId: p} )
+    ## add linked vertical selection line to all plots
+    addLinkedCrosshairs(allPlots)
 
-
-    ## plot power data
-    if len(gpioPlots):
-        p = list(gpioPlots.values())[-1]
-    else:
-        p = None
-
-    powerPlots = OrderedDict()
-    for nodeId, nodeData in powerData.items():
-        p = plotObserverPower(nodeId, nodeData, pOld=p, absoluteTimeFormatter=absoluteTimeFormatter)
-
-        # adding vlines
-        p.add_layout(vline_start)
-        p.add_layout(vline_end)
-        p.add_layout(vline_middle)
-
-        # time measuring
-        p.add_layout(marker_start)
-        p.add_layout(marker_end)
-        p.add_layout(box)
-        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'p': p}
-        p.js_on_event(Tap, CustomJS(args = args, code = js_click))
-
-        # add functionality to reset by double-click
-        p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
-
-        powerPlots.update( {nodeId: p} )
-
-    ## plot datatrace data
-    if len(gpioPlots):
-        p = list(gpioPlots.values())[-1]
-    elif len(powerPlots):
-        p = list(powerPlots.values())[-1]
-    else:
-        p = None
-
-    datatracePlots = OrderedDict()
-    for nodeId, nodeData in datatraceData.items():
-        p = plotObserverDatatrace(nodeId, nodeData, pOld=p, absoluteTimeFormatter=absoluteTimeFormatter)
-
-        # adding vlines
-        p.add_layout(vline_start)
-        p.add_layout(vline_end)
-        p.add_layout(vline_middle)
-
-        # time measuring
-        p.add_layout(marker_start)
-        p.add_layout(marker_end)
-        p.add_layout(box)
-        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'p': p}
-        p.js_on_event(Tap, CustomJS(args = args, code = js_click))
-
-        # add functionality to reset by double-click
-        p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
-
-        datatracePlots.update( {nodeId: p} )
-
-    # figure out last plot for linking x-axis
-    if len(datatracePlots) > 0:
-        lastPlot = list(datatracePlots.values())[-1]
-    elif len(powerPlots) > 0:
-        lastPlot = list(powerPlots.values())[-1]
-    elif len(gpioPlots) > 0:
-        lastPlot = list(gpioPlots.values())[-1]
-    else:
-        lastPlot = None
-    # lastPlot.xaxis.visible = True # used if no dummy plot is used for x-axis
-
-    ## create linked dummy plot to get shared x axis without scaling height of bottom most plot
-    pTime = figure(
-        title=None,
-        x_range=lastPlot.x_range,
-        plot_height=0,
-        min_border=0,
-        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
-        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
-        active_scroll='xwheel_zoom',
-        height_policy='fit',
-        width_policy='fit',
-        # output_backend="webgl",
-    )
-    source = ColumnDataSource(dict(x=[0, maxT], y1=[0, 0], y2=[0, 0]))
-    vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
-    pTime.add_glyph(source, vareaGlyph)
-    pTime.xgrid.grid_line_color = None
-    pTime.ygrid.grid_line_color = None
-    pTime.yaxis.visible = False
-
-    addLinkedCrosshairs( list(gpioPlots.values()) + list(powerPlots.values()) + list(datatracePlots.values()) + [pTime] )
-
-    # arrange all plots in grid
+    ## arange plots in grid
     gridPlots = []
-    allNodeIds = sorted(list(set(gpioPlots.keys()).union(set(powerPlots.keys())).union(set(datatracePlots))))
     for nodeId in allNodeIds:
         labelDiv = Div(
             # text='<div style="display: table-cell; vertical-align: middle", height="100%""><b>{}</b></div>'.format(nodeId),
@@ -460,46 +429,46 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
 
     tooltipStyle = '''
     <style>
-  .tooltip {
-    font-size: 18px;
-    position: relative;
-    display: inline-block;
-  }
+        .tooltip {
+        font-size: 18px;
+        position: relative;
+        display: inline-block;
+        }
 
-  .tooltip .tooltiptext {
-    visibility: hidden;
-    width: 300px;
-    background-color: #555;
-    color: #fff;
-    text-align: center;
-    border-radius: 4px;
-    padding: 5px 0;
-    position: absolute;
-    z-index: 1;
-    top: 125%;
-    left: 50%;
-    margin-left: -150px;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
+        .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 300px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 4px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        top: 125%;
+        left: 50%;
+        margin-left: -150px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        }
 
-  .tooltip .tooltiptext::after {
-    content: "";
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: transparent transparent #555 transparent;
-  }
+        .tooltip .tooltiptext::after {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent transparent #555 transparent;
+        }
 
-  .tooltip:hover .tooltiptext {
-    visibility: visible;
-    font-size: 16px;
-    opacity: 1;
-  }
-  </style>
+        .tooltip:hover .tooltiptext {
+        visibility: visible;
+        font-size: 16px;
+        opacity: 1;
+        }
+    </style>
     '''
 
     ## add plot for time scale
@@ -509,7 +478,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
         width_policy='fixed',
         height_policy='fit',
     )
-    gridPlots.append([labelDiv, pTime])
+    gridPlots.append([labelDiv, timePlot])
 
     # stack all plots
     grid = gridplot(
@@ -627,27 +596,27 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
             'resetStr': list(zoomLut.keys())[0],
             'toggleCenterLineStr': list(zoomLut.keys())[1],
             'fitTraceStr': list(zoomLut.keys())[2],
-            'p': pTime,
+            'p': timePlot,
             'zoomSelect': zoomSelect,
             'vSpanMiddle': vline_middle,
         },
         code="""
-        // console.log(cb_obj.value);
-        if (cb_obj.value == resetStr) {
-            // do nothing
-        } else if (cb_obj.value == toggleCenterLineStr) {
-            vSpanMiddle.visible = !vSpanMiddle.visible;
-        } else if (cb_obj.value == fitTraceStr) {
-            p.reset.emit();
-        } else {
-            var middle = 1/2*(p.x_range.getv('end') + p.x_range.getv('start'));
-            var start = middle - 1/2*zoomLut[cb_obj.value];
-            var end = middle + 1/2*zoomLut[cb_obj.value];
-            p.x_range.setv({"start": start, "end": end});
-        }
-        vSpanMiddle.location = 1/2*(p.inner_width);
-        // reset drop-down
-        zoomSelect.value = resetStr;
+            // console.log(zoomSelect, cb_obj.value);
+            vSpanMiddle.location = 1/2*(p.inner_width);
+            if (cb_obj.value == resetStr) {
+                // do nothing
+            } else if (cb_obj.value == toggleCenterLineStr) {
+                vSpanMiddle.visible = !vSpanMiddle.visible;
+            } else if (cb_obj.value == fitTraceStr) {
+                p.reset.emit();
+            } else {
+                var middle = 1/2*(p.x_range.getv('end') + p.x_range.getv('start'));
+                var start = middle - 1/2*zoomLut[cb_obj.value];
+                var end = middle + 1/2*zoomLut[cb_obj.value];
+                p.x_range.setv({"start": start, "end": end});
+            }
+            // reset drop-down
+            zoomSelect.value = resetStr;
         """,
     )
     zoomSelect.js_on_change('value', zoomSelectCallback)
@@ -691,11 +660,10 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
         """
     ))
 
-    nodeIds = list(set(gpioData).union(powerData))
-    checkboxNodes = CheckboxButtonGroup(labels=[str(nodeId) for nodeId in nodeIds], active=list(range(len(nodeIds))))
+    checkboxNodes = CheckboxButtonGroup(labels=[str(nodeId) for nodeId in allNodeIds], active=list(range(len(allNodeIds))))
     checkboxNodes.js_on_change('active', CustomJS(
         args={
-            'nodeIds': nodeIds,
+            'nodeIds': allNodeIds,
             'gridPlots': gridPlots,
         },
         code="""
@@ -718,7 +686,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
     # make sure centerline stays in center if window is resized
     updateCenterlineCallback = CustomJS(
         args={
-            'p': pTime,
+            'p': timePlot,
             'vSpanMiddle': vline_middle,
         },
         code="""
@@ -748,7 +716,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
     Args:
         resultPath: path to the flocklab results (unzipped)
         outputDir:  directory to store the resulting html file in (default: current working directory)
-        interctive: switch to turn on/off automatic display of generated bokeh plot
+        interactive: switch to turn on/off automatic display of generated bokeh plot
     '''
     # check if resultPath is not empty
     print(resultPath)
