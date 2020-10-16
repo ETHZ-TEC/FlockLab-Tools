@@ -67,4 +67,5 @@ Initial version
 * visualization
   * quickzoom: changed zoom center to the middle of the plot, added centerline option
   * added buttons to enable/disable plots
-  * added support to plot datatrace data
+  * added support for plotting datatrace data
+  * added absolute time to hover info of all plots using CustomJSHover

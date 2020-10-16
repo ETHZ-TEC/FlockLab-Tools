@@ -13,10 +13,9 @@ import glob
 from copy import copy
 
 from bokeh.plotting import figure, show, save, output_file
-from bokeh.models import ColumnDataSource, Plot, LinearAxis, Grid, CrosshairTool, HoverTool, CustomJS, Div, Select, CheckboxButtonGroup
-from bokeh.models.glyphs import VArea, Line
+from bokeh.models import ColumnDataSource, Plot, Span, BoxAnnotation, CrosshairTool, HoverTool, CustomJS, Div, Select, CheckboxButtonGroup, CustomJSHover
+from bokeh.models.glyphs import VArea, Line, Circle
 from bokeh.layouts import gridplot, row, column, layout, Spacer
-from bokeh.models import Legend, Span, Label, BoxAnnotation
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 from bokeh.events import Tap, DoubleTap, ButtonClick
 
@@ -89,7 +88,7 @@ def trace2series(t, v):
 
     return (tNewNew, vNewNew)
 
-def plotObserverGpio(nodeId, nodeData, pOld):
+def plotObserverGpio(nodeId, nodeData, pOld, absoluteTimeFormatter):
     colors = ['blue', 'red', 'green', 'orange']
     p = figure(
         title=None,
@@ -110,25 +109,21 @@ def plotObserverGpio(nodeId, nodeData, pOld):
             continue
         signalName = '{} (Node {})'.format(pin, nodeId)
         t, v, = trace2series(pinData['t'], pinData['v'])
-        t_abs, v_dummy, = trace2series(pinData['tAbs'], pinData['v'])
-        source = ColumnDataSource(dict(x=t, t_abs=t_abs, y1=np.zeros_like(v)+length-i, y2=v+length-i))
+        source = ColumnDataSource(dict(t=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
         # plot areas
-        vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color=colorMapping(pin))
+        vareaGlyph = VArea(x="t", y1="y1", y2="y2", fill_color=colorMapping(pin))
         varea = p.add_glyph(source, vareaGlyph, name=signalName)
         vareas += [(pin,[varea])]
 
         # plot lines (necessary for tooltip/hover and for visibility if zoomed out!)
-        lineGlyph = Line(x="x", y="y2", line_color=colorMapping(pin).darken(0.2))
+        lineGlyph = Line(x="t", y="y2", line_color=colorMapping(pin).darken(0.2))
         x = p.add_glyph(source, lineGlyph, name=signalName)
 
-    # legend = Legend(items=vareas, location="center")
-    # p.add_layout(legend, 'right')
-
-
     hover = p.select(dict(type=HoverTool))
+    hover.formatters={"@t": absoluteTimeFormatter}
     hover.tooltips = OrderedDict([
-        ('Time (rel)', '@x{0.0000000} s'),
-        ('Time (abs)', '@t_abs{0.0000000} s'),
+        ('Time (rel)', '@t{0.0000000} s'),
+        ('Time (abs)', '@t{withOffset:0.0000000} s'),
         ('Signal', '$name')
     ])
 
@@ -146,17 +141,10 @@ def plotObserverGpio(nodeId, nodeData, pOld):
 
     p.xaxis.major_label_text_font_size = '0pt'  # turn off x-axis tick labels
     p.yaxis.major_label_text_font_size = '0pt'  # turn off y-axis tick labels
-    # p.xaxis.axis_label = "GPIO Traces"
-    # p.xaxis.axis_label_text_color = "#aa6666"
-    # p.xaxis.axis_label_standoff = 30
-
-    # p.yaxis.axis_label = f"{nodeId}"
-    # p.yaxis.axis_label = f"Node {nodeId}\n GPIO Traces"
-    # p.yaxis.axis_label_text_font_style = "italic"
 
     return p
 
-def plotObserverPower(nodeId, nodeData, pOld):
+def plotObserverPower(nodeId, nodeData, pOld, absoluteTimeFormatter):
     p = figure(
         title=None,
         x_range=pOld.x_range if pOld is not None else None,
@@ -170,10 +158,10 @@ def plotObserverPower(nodeId, nodeData, pOld):
         # output_backend="webgl",
     )
     source = ColumnDataSource(dict(
-      t=nodeData['t'],
-      i=nodeData['i'],
-      v=nodeData['v'],
-      p=nodeData['v']*nodeData['i'],
+        t=nodeData['t'],
+        i=nodeData['i'],
+        v=nodeData['v'],
+        p=nodeData['v']*nodeData['i'],
     ))
     line_i = Line(x="t", y="i", line_color='blue')
     # line_v = Line(x="t", y="v", line_color='red')
@@ -182,8 +170,10 @@ def plotObserverPower(nodeId, nodeData, pOld):
     # p.add_glyph(source, line_v, name='{}'.format(nodeId))
     p.add_glyph(source, line_p, name='{}'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
+    hover.formatters={"@t": absoluteTimeFormatter}
     hover.tooltips = OrderedDict([
       ('Time (rel)', '@t{0.00000000} s'),
+      ('Time (abs)', '@t{withOffset:0.00000000} s'),
       ('V', '@v{0.000000} V'),
       ('I', '@i{0.000000} mA'),
       ('Power', '@p{0.000000} mW'),
@@ -202,7 +192,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
 
     return p
 
-def plotObserverDatatrace(nodeId, nodeData, pOld):
+def plotObserverDatatrace(nodeId, nodeData, pOld, absoluteTimeFormatter):
     p = figure(
         title=None,
         x_range=pOld.x_range if pOld is not None else None,
@@ -224,9 +214,13 @@ def plotObserverDatatrace(nodeId, nodeData, pOld):
         ))
         line = Line(x="t", y="value", line_color=colorMap[i])
         p.add_glyph(source, line, name='{}'.format(variable))
+        circle = Circle(x="t", y="value", size=4, line_color=colorMap[i], fill_color="white", line_width=1)
+        p.add_glyph(source, circle, name='{}'.format(variable))
         hover = p.select(dict(type=HoverTool))
+        hover.formatters={"@t": absoluteTimeFormatter}
         hover.tooltips = OrderedDict([
           ('Time (rel)', '@t{0.0000000} s'),
+          ('Time (abs)', '@t{withOffset:0.0000000} s'),
           ('Value', '@value{0}'),
           ('Access', '@access'),
           ('Delay marker', '@delay_marker'),
@@ -240,7 +234,7 @@ def plotObserverDatatrace(nodeId, nodeData, pOld):
 
     return p
 
-def plotAll(gpioData, powerData, datatraceData, testNum, interactive=False):
+def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, interactive=False):
     # determine max timestamp value
     maxT = 0
     minT = np.inf
@@ -320,7 +314,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, interactive=False):
     gpioPlots = OrderedDict()
     p = None
     for nodeId, nodeData in gpioData.items():
-        p = plotObserverGpio(nodeId, nodeData, pOld=p)
+        p = plotObserverGpio(nodeId, nodeData, pOld=p, absoluteTimeFormatter=absoluteTimeFormatter)
 
         # adding vlines
         p.add_layout(vline_start)
@@ -348,7 +342,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, interactive=False):
 
     powerPlots = OrderedDict()
     for nodeId, nodeData in powerData.items():
-        p = plotObserverPower(nodeId, nodeData, pOld=p)
+        p = plotObserverPower(nodeId, nodeData, pOld=p, absoluteTimeFormatter=absoluteTimeFormatter)
 
         # adding vlines
         p.add_layout(vline_start)
@@ -377,7 +371,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, interactive=False):
 
     datatracePlots = OrderedDict()
     for nodeId, nodeData in datatraceData.items():
-        p = plotObserverDatatrace(nodeId, nodeData, pOld=p)
+        p = plotObserverDatatrace(nodeId, nodeData, pOld=p, absoluteTimeFormatter=absoluteTimeFormatter)
 
         # adding vlines
         p.add_layout(vline_start)
@@ -713,6 +707,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, interactive=False):
         """
     ))
     # TODO: add checkboxes for GPIO lines
+    # TODO: add checkboxes for datatrace variables
 
     titleLine = row(
         [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, zoomSelect, checkboxServices, checkboxNodes],
@@ -864,6 +859,19 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
     if datatraceAvailable:
         refTime = min( refTime, np.min(datatraceDf.timestamp) )
 
+    # generate custom hover tooltip formatter for adding absolute time to hover info without adding another series of data (to prevent data duplication)
+    absoluteTimeFormatter = CustomJSHover(
+        args=dict(offsetSource=ColumnDataSource(dict(offset=[refTime]))),
+        code="""
+            var numFormatter = Bokeh.require('@bokehjs/core/util/templating').DEFAULT_FORMATTERS.numeral;
+            var formatSplit = format.split(':');
+            if (formatSplit.length == 2 && formatSplit[0] == 'withOffset') {
+                return numFormatter(special_vars.data_x + offsetSource.data.offset[0], formatSplit[1], special_vars);
+            } else {
+                return numFormatter(special_vars.data_x, format, special_vars)
+            }
+    """)
+
     ## prepare gpio data
     gpioData = OrderedDict()
     pinOrdering = ['INT1', 'INT2', 'LED1', 'LED2', 'LED3', 'SIG1', 'SIG2', 'PPS', 'nRST']
@@ -872,7 +880,6 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
         gpioDf.sort_values(by=['node_id', 'pin_name', 'timestamp'], inplace=True)
         # determine global end of gpio trace (for adding edge back to 0 at the end of trace for signals which end with 1)
         tEnd = gpioDf[(gpioDf.pin_name=='nRST') & (gpioDf.value==0)].timestampRelative.to_numpy()[-1]
-        tAbsEnd = gpioDf[(gpioDf.pin_name=='nRST') & (gpioDf.value==0)].timestamp.to_numpy()[-1]
 
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in gpioDf.groupby('node_id'):
@@ -891,14 +898,12 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
                     # check if pin is ever toggled to 1 in the whole GPIO tracing (all nodes)
                     if (gpioDf[(gpioDf.pin_name==pin)].value==1).any():
                         t = pinGrp.timestampRelative.to_numpy()
-                        tAbs = pinGrp.timestamp.to_numpy()
                         v = pinGrp.value.to_numpy()
                         if len(v):
                             if v[-1] == 1:
                                 t = np.append(t, tEnd)
-                                tAbs = np.append(tAbs, tAbsEnd)
                                 v = np.append(v, 0)
-                        trace = {'t': t, 'tAbs': tAbs, 'v': v}
+                        trace = {'t': t, 'v': v}
                         nodeData.update({pin: trace})
             gpioData.update({nodeId: nodeData})
 
@@ -954,6 +959,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
         powerData=powerData,
         datatraceData=datatraceData,
         testNum=testNum,
+        absoluteTimeFormatter=absoluteTimeFormatter,
         interactive=interactive,
     )
 
