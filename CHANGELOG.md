@@ -67,3 +67,4 @@ Initial version
 * visualization
   * quickzoom: changed zoom center to the middle of the plot, added centerline option
   * added buttons to enable/disable plots
+  * added support to plot datatrace data

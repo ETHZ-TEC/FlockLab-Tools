@@ -129,7 +129,7 @@ def plotObserverGpio(nodeId, nodeData, pOld):
     hover.tooltips = OrderedDict([
         ('Time (rel)', '@x{0.0000000} s'),
         ('Time (abs)', '@t_abs{0.0000000} s'),
-        ('Signal','$name')
+        ('Signal', '$name')
     ])
 
     p.xgrid.grid_line_color = None
@@ -187,7 +187,7 @@ def plotObserverPower(nodeId, nodeData, pOld):
       ('V', '@v{0.000000} V'),
       ('I', '@i{0.000000} mA'),
       ('Power', '@p{0.000000} mW'),
-      ('Node','$name'),
+      ('Node', '$name'),
     ])
 
     p.xgrid.grid_line_color = None
@@ -202,7 +202,45 @@ def plotObserverPower(nodeId, nodeData, pOld):
 
     return p
 
-def plotAll(gpioData, powerData, testNum, interactive=False):
+def plotObserverDatatrace(nodeId, nodeData, pOld):
+    p = figure(
+        title=None,
+        x_range=pOld.x_range if pOld is not None else None,
+        plot_height=900,
+        min_border=0,
+        tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
+        active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
+        active_scroll='xwheel_zoom',
+        sizing_mode='stretch_both', # full screen
+        # output_backend="webgl",
+    )
+    colorMap = ['blue', 'red', 'green', 'black']
+    for i, (variable, trace) in enumerate(nodeData.items()):
+        source = ColumnDataSource(dict(
+          t=trace['t'],
+          value=trace['value'],
+          access=trace['access'],
+          delay_marker=trace['delay_marker'],
+        ))
+        line = Line(x="t", y="value", line_color=colorMap[i])
+        p.add_glyph(source, line, name='{}'.format(variable))
+        hover = p.select(dict(type=HoverTool))
+        hover.tooltips = OrderedDict([
+          ('Time (rel)', '@t{0.0000000} s'),
+          ('Value', '@value{0}'),
+          ('Access', '@access'),
+          ('Delay marker', '@delay_marker'),
+          ('Variable', '$name'),
+        ])
+
+    p.xgrid.grid_line_color = None
+    p.ygrid.grid_line_color = None
+    p.xaxis.visible = False
+    p.yaxis.visible = False
+
+    return p
+
+def plotAll(gpioData, powerData, datatraceData, testNum, interactive=False):
     # determine max timestamp value
     maxT = 0
     minT = np.inf
@@ -217,6 +255,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
             if pinMin < minT:
                 minT = pinMin
 
+    # FIXME: handle case where no gpio data is available
     vline_start = Span(location=minT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
     vline_end = Span(location=maxT, dimension='height', line_color=(25,25,25,0.1), line_width=3)
     vline_middle = Span(location=0, dimension='height', line_color=(25,25,25,0.4), line_width=2, location_units='screen', render_mode='canvas', visible=False)
@@ -275,8 +314,9 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     box.fill_color = 'grey'
     box.fill_alpha = 0.1
     box.visible = False
+    # FIXME: rename box, use something more expressive
 
-    # plot gpio data
+    ## plot gpio data
     gpioPlots = OrderedDict()
     p = None
     for nodeId, nodeData in gpioData.items():
@@ -300,7 +340,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
         gpioPlots.update( {nodeId: p} )
 
 
-    # plot power data
+    ## plot power data
     if len(gpioPlots):
         p = list(gpioPlots.values())[-1]
     else:
@@ -327,8 +367,39 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
 
         powerPlots.update( {nodeId: p} )
 
+    ## plot datatrace data
+    if len(gpioPlots):
+        p = list(gpioPlots.values())[-1]
+    elif len(powerPlots):
+        p = list(powerPlots.values())[-1]
+    else:
+        p = None
+
+    datatracePlots = OrderedDict()
+    for nodeId, nodeData in datatraceData.items():
+        p = plotObserverDatatrace(nodeId, nodeData, pOld=p)
+
+        # adding vlines
+        p.add_layout(vline_start)
+        p.add_layout(vline_end)
+        p.add_layout(vline_middle)
+
+        # time measuring
+        p.add_layout(marker_start)
+        p.add_layout(marker_end)
+        p.add_layout(box)
+        args = {'marker_start': marker_start, 'marker_end': marker_end, 'box': box, 'p': p}
+        p.js_on_event(Tap, CustomJS(args = args, code = js_click))
+
+        # add functionality to reset by double-click
+        p.js_on_event(DoubleTap, CustomJS(args=dict(p=p), code='p.reset.emit()'))
+
+        datatracePlots.update( {nodeId: p} )
+
     # figure out last plot for linking x-axis
-    if len(powerPlots) > 0:
+    if len(datatracePlots) > 0:
+        lastPlot = list(datatracePlots.values())[-1]
+    elif len(powerPlots) > 0:
         lastPlot = list(powerPlots.values())[-1]
     elif len(gpioPlots) > 0:
         lastPlot = list(gpioPlots.values())[-1]
@@ -356,13 +427,11 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     pTime.ygrid.grid_line_color = None
     pTime.yaxis.visible = False
 
-    addLinkedCrosshairs( list(gpioPlots.values()) + list(powerPlots.values()) + [pTime] )
+    addLinkedCrosshairs( list(gpioPlots.values()) + list(powerPlots.values()) + list(datatracePlots.values()) + [pTime] )
 
     # arrange all plots in grid
     gridPlots = []
-    # print(gpioPlots.keys())
-    # print(powerPlots.keys())
-    allNodeIds = sorted(list(set(gpioPlots.keys()).union(set(powerPlots.keys()))))
+    allNodeIds = sorted(list(set(gpioPlots.keys()).union(set(powerPlots.keys())).union(set(datatracePlots))))
     for nodeId in allNodeIds:
         labelDiv = Div(
             # text='<div style="display: table-cell; vertical-align: middle", height="100%""><b>{}</b></div>'.format(nodeId),
@@ -382,18 +451,17 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
             height_policy='fixed',
             height=10,
         )
-        # print(len(powerPlots))
-        if (nodeId in gpioPlots) and (nodeId in powerPlots):
-            colList = [gpioPlots[nodeId], powerPlots[nodeId]]
-        elif (nodeId in gpioPlots):
-            colList = [gpioPlots[nodeId]]
-        elif (nodeId in powerPlots):
-            colList = [powerPlots[nodeId]]
-        else:
+
+        colList = []
+        if (nodeId in gpioPlots) :
+            colList.append(gpioPlots[nodeId])
+        if (nodeId in powerPlots):
+            colList.append(powerPlots[nodeId])
+        if (nodeId in datatracePlots):
+            colList.append(datatracePlots[nodeId])
+        if not colList:
             raise Exception("ERROR: No plot for {nodeId} available, even though nodeId is present!".format(nodeId=nodeId))
         plotCol = column(colList, sizing_mode='stretch_both')
-        # plotCol = column(colList + [spacer], sizing_mode='stretch_both')
-        # labelCol = column([labelDiv, spacer], sizing_mode='fixed')
         gridPlots.append([labelDiv, plotCol])
 
     tooltipStyle = '''
@@ -590,7 +658,6 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
     )
     zoomSelect.js_on_change('value', zoomSelectCallback)
 
-    datatracePlots = {} # FIXME
     serviceNames = []
     if gpioPlots:
         serviceNames.append("GPIO")
@@ -645,7 +712,7 @@ def plotAll(gpioData, powerData, testNum, interactive=False):
             }
         """
     ))
-    # FIXME: add checkboxes for GPIO lines
+    # TODO: add checkboxes for GPIO lines
 
     titleLine = row(
         [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, zoomSelect, checkboxServices, checkboxNodes],
@@ -700,7 +767,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
     resultPath = os.path.normpath(resultPath) # remove trailing slash if there is one
     testNum = os.path.basename(os.path.abspath(resultPath))
 
-    # try to read gpio tracing data
+    ## try to read gpio tracing data
     gpioPath = os.path.join(resultPath, 'gpiotracing.csv')
     requiredGpioCols = ['timestamp', 'node_id', 'pin_name', 'value']
     gpioAvailable = False
@@ -719,10 +786,8 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
                 raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
 
             gpioAvailable = True
-    else:
-        print('gpiotracing.csv could not be found!')
 
-    # try to read power profiling data
+    ## try to read power profiling data
     powerPath = os.path.join(resultPath, 'powerprofiling.csv')
     powerRldFiles = glob.glob(os.path.join(resultPath, './powerprofiling*.rld'))
     requiredPowerCols = ['timestamp', 'node_id', 'current_mA', 'voltage_V']
@@ -762,33 +827,48 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
             powerDfList.append(tempDf)
 
         powerDf = pd.concat(powerDfList)
-        # import pdb
-        # pdb.set_trace()
         if len(powerDf) > 0:
             powerAvailable = True
-    else:
-        # print('powerprofiling data (\'.csv\' or \'.rld\') could not be found!')
-        pass
+
+    ## try to read datatrace data
+    datatracePath = os.path.join(resultPath, 'datatrace.csv')
+    requiredDatatraceCols = ['timestamp', 'node_id', 'variable', 'value']
+    datatraceAvailable = False
+
+    if os.path.isfile(datatracePath):
+        # Read datatrace data csv to pandas dataframe (instruct pandas with float_precision to not sacrifice accuracy for the sake of speed)
+        datatraceDf = pd.read_csv(datatracePath, float_precision='round_trip')
+        # sanity check: column names
+        for col in requiredDatatraceCols:
+            if not col in datatraceDf.columns:
+                raise Exception('ERROR: Required column ({}) in datatrace.csv file is missing.'.format(col))
+
+        if len(datatraceDf) > 0:
+            # sanity check node_id data type
+            if not 'int' in str(datatraceDf.node_id.dtype):
+                raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
+
+            datatraceAvailable = True
 
     # handle case where there is no data to plot
-    if (not gpioAvailable) and (not powerAvailable):
+    if (not gpioAvailable) and (not powerAvailable) and (not datatraceAvailable):
         print('ERROR: No data for plotting available!')
         sys.exit(1)
 
-    # determine first timestamp (globally)
-    minT = None
-    if gpioAvailable and powerAvailable:
-        minT = min( np.min(gpioDf.timestamp), np.min(powerDf.timestamp) )
-    elif gpioAvailable:
-        minT = np.min(gpioDf.timestamp)
-    elif powerAvailable:
-        minT = np.min(powerDf.timestamp)
+    # determine first timestamp globally (used as reference for relative time)
+    refTime = np.inf
+    if gpioAvailable:
+        refTime = min( refTime, np.min(gpioDf.timestamp) )
+    if powerAvailable:
+        refTime = min( refTime, np.min(powerDf.timestamp) )
+    if datatraceAvailable:
+        refTime = min( refTime, np.min(datatraceDf.timestamp) )
 
-    # prepare gpio data
+    ## prepare gpio data
     gpioData = OrderedDict()
     pinOrdering = ['INT1', 'INT2', 'LED1', 'LED2', 'LED3', 'SIG1', 'SIG2', 'PPS', 'nRST']
     if gpioAvailable:
-        gpioDf['timestampRelative'] = gpioDf.timestamp - minT
+        gpioDf['timestampRelative'] = gpioDf.timestamp - refTime
         gpioDf.sort_values(by=['node_id', 'pin_name', 'timestamp'], inplace=True)
         # determine global end of gpio trace (for adding edge back to 0 at the end of trace for signals which end with 1)
         tEnd = gpioDf[(gpioDf.pin_name=='nRST') & (gpioDf.value==0)].timestampRelative.to_numpy()[-1]
@@ -796,7 +876,6 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
 
         # Generate gpioData dict from pandas dataframe
         for nodeId, nodeGrp in gpioDf.groupby('node_id'):
-            # print(nodeId)
             pinList = copy(pinOrdering)
             nodeData = OrderedDict()
             pinGrps = nodeGrp.groupby('pin_name')
@@ -824,10 +903,10 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
             gpioData.update({nodeId: nodeData})
 
 
-    # prepare power data
+    ## prepare power data
     powerData = OrderedDict()
     if powerAvailable:
-        powerDf['timestampRelative'] = powerDf.timestamp - minT
+        powerDf['timestampRelative'] = powerDf.timestamp - refTime
         powerDf.sort_values(by=['node_id', 'timestamp'], inplace=True)
 
         # Get overview of available data
@@ -838,17 +917,45 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
             # print(nodeId)
             trace = {
-              't': nodeGrp.timestampRelative.to_numpy(),
+              't': nodeGrp['timestampRelative'].to_numpy(),
               'i': nodeGrp['current_mA'].to_numpy(),
               'v': nodeGrp['voltage_V'].to_numpy(),
             }
             powerData.update({nodeId: trace})
 
+    ## prepare datatrace data
+    datatraceData = OrderedDict()
+    if datatraceAvailable:
+        datatraceDf['timestampRelative'] = datatraceDf.timestamp - refTime
+        datatraceDf.sort_values(by=['node_id', 'variable', 'timestamp'], inplace=True)
+
+        # Generate datatraceData dict from pandas dataframe
+        for nodeId, nodeGrp in datatraceDf.groupby('node_id'):
+            nodeData = OrderedDict()
+            for variableName, variableGrp in nodeGrp.groupby('variable'):
+                trace = {
+                  't': variableGrp['timestampRelative'].to_numpy(),
+                  'value': variableGrp['value'].to_numpy(),
+                  'access': variableGrp['access'].to_numpy(),
+                  'delay_marker': variableGrp['delay_marker'].to_numpy(),
+                }
+                nodeData.update({variableName: trace})
+            datatraceData.update({nodeId: nodeData})
+
+    # set output file path
     if outputDir is None:
         output_file(os.path.join(os.getcwd(), "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
     else:
         output_file(os.path.join(outputDir, "flocklab_plot_{}.html".format(testNum)), title="{}".format(testNum))
-    plotAll(gpioData, powerData, testNum=testNum, interactive=interactive)
+
+    # generate plots
+    plotAll(
+        gpioData=gpioData,
+        powerData=powerData,
+        datatraceData=datatraceData,
+        testNum=testNum,
+        interactive=interactive,
+    )
 
 
 ###############################################################################
