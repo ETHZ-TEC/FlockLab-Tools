@@ -359,9 +359,9 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         marker_start.visible=false
         marker_end.visible=false
         box.visible=false
-        setSpan("marker_start_span", "   ")
-        setSpan("marker_end_span", "   ")
-        setSpan("marker_diff_span", "   ")
+        setSpan("marker_start_span", "\xa0") // note 0xa0 corresponds to HTML &nbsp (non-breaking space)
+        setSpan("marker_end_span", "\xa0")
+        setSpan("marker_diff_span", "\xa0")
     }
     '''
     mt_marker_start = Span(location=0, dimension='height', line_color='black', line_dash='dashed', line_width=2)
@@ -411,10 +411,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
             align='center',
             width=30,
             width_policy='fixed',
-        )
-        spacer = Spacer(
-            height_policy='fixed',
-            height=10,
+            height_policy='fit',
         )
 
         colList = []
@@ -500,7 +497,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     spaceDiv1 = Div(
         text='<div width="30px"></div>',
         style={'background-color': 'yellow'},
-        width=50,
+        width=30,
         width_policy='fixed',
         height_policy='fit',
     )
@@ -522,7 +519,10 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         text='''
         <table>
           <tr>
-            <th width="20px" align="left">
+            <td width="100px" align="left">
+              <div class="tooltip" style="vertical-align:middle; cursor:default; color:grey; font-size: 23px; padding: 2px;">&#9432;<span class="tooltiptext"><b>Set marker</b>:<br/>enable &#9312; or &#9313; + click into plot<br/><b>Remove markers</b>:<br/>disable &#9312; and &#9313; + click into plot<br/><b>Reset plot</b>:<br/>double-click inside plot</span></div>
+            </td>
+            <td width="20px" align="left">
               <span id="marker1" style="padding: 2px; cursor:default; color:grey; font-size: 25px;" onclick="(function() {
                 if (document.getElementById('marker1').style.color == 'grey') {
                     document.getElementById('marker1').style.color='black';
@@ -532,9 +532,11 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 }
                 document.getElementById('marker2').style.color='grey';
                 })();">&#9312;</span>
-            <th width="180px" align="left">
-              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_start_span">   </span></th>
-            <th width="20px" align="left">
+            </td>
+            <td width="110px" align="left">
+              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_start_span">&nbsp</span>
+            </td>
+            <td width="20px" align="left">
               <span id="marker2" style="padding: 2px; cursor:default; color:grey; font-size: 25px;"  onclick="(function() {
                 if (document.getElementById('marker2').style.color == 'grey') {
                     document.getElementById('marker2').style.color='black';
@@ -544,31 +546,24 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 }
                 document.getElementById('marker1').style.color='grey';
                 })();">&#9313;</span>
-            <th width="180px" align="left">
-              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_end_span">   </span></th>
-            <th width="20px" align="left">
+            </td>
+            <td width="110px" align="left">
+              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_end_span">&nbsp</span>
+            </td>
+            <td width="20px" align="left">
               <span style="padding: 2px; cursor:default; color:grey; font-size: 25px;">&#916;</span>
-            <th width="180px" align="left">
-              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px;" id="marker_diff_span">   </span></th>
+            </td>
+            <td width="110px" align="left">
+              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_diff_span">&nbsp</span>
+            </td>
           </tr>
-        </table>
-        ''',
+        </table>''' + '{}'.format(tooltipStyle),
         # style={'background-color': 'yellow'},
-        width=550,
-        width_policy='fixed',
+        align='center',
+        width_policy='min',
         height_policy='fit',
     )
-    infoDiv = Div(
-        text='''<table>
-          <tr>
-            <td align="left">
-              <div class="tooltip" style="vertical-align:middle; cursor:default; color:grey; font-size: 20px; padding: 2px;">&#9432;<span class="tooltiptext"><b>Set marker</b>:<br/>enable &#9312; or &#9313; + click into plot<br/><b>Remove markers</b>:<br/>disable &#9312; and &#9313; + click into plot<br/><b>Reset plot</b>:<br/>double-click inside plot</span></div>
-          </tr>
-        </table>{}'''.format(tooltipStyle),
-        width=30,
-        width_policy='fixed',
-        height_policy='fit',
-    )
+
     zoomLut = OrderedDict([
         ('Quick Zoom', None),
         ('toggle centerline', None),
@@ -587,6 +582,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     ])
     quickzoomSelect = Select(
         options=list(zoomLut.keys()),
+        align='center',
         max_width=120,
         width_policy='fit',
         height_policy='min',
@@ -622,6 +618,9 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     )
     quickzoomSelect.js_on_change('value', quickzoomSelectCallback)
 
+    # prepare title list elements
+    titleElementsList = [titleDiv, spaceDiv1, measureDiv, spaceDiv2, quickzoomSelect, spaceDiv3]
+
     ## checkboxes for services
     serviceNames = []
     if gpioPlots:
@@ -634,7 +633,10 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     checkboxServices = CheckboxButtonGroup(
         labels=serviceNames,
         active=list(range(len(serviceNames))),
+        margin=(0, 5, 0, 5),
+        # max_height=25,
         width_policy='min',
+        height_policy='min',
     )
     checkboxServices.js_on_change('active', CustomJS(
         args={
@@ -669,7 +671,10 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     checkboxNodes = CheckboxButtonGroup(
         labels=[str(nodeId) for nodeId in allNodeIds],
         active=list(range(len(allNodeIds))),
+        # max_height=25,
+        margin=(0, 5, 0, 5),
         width_policy='min',
+        height_policy='min',
     )
     checkboxNodes.js_on_change('active', CustomJS(
         args={
@@ -685,8 +690,15 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         """
     ))
 
-    # prepare title list elements
-    titleElements = [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, quickzoomSelect, checkboxServices, checkboxNodes]
+    # checkbox general row
+    checkboxGeneralRow = row(
+        [checkboxServices, checkboxNodes],
+        width_policy='min',
+        height_policy='min',
+    )
+
+    ## cheboxes for signals
+    checkboxSignalsList = []
 
     # checkboxes for GPIO pins
     if gpioPlots:
@@ -713,7 +725,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 }
             """
         ))
-        titleElements.append(checkboxGpio)
+        checkboxSignalsList.append(checkboxGpio)
 
     # checkboxes for Power signals (I, V, P)
     if powerPlots:
@@ -740,7 +752,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 }
             """
         ))
-        titleElements.append(checkboxPower)
+        checkboxSignalsList.append(checkboxPower)
 
     # checkboxes for datatrace variables
     if datatracePlots:
@@ -767,13 +779,27 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 }
             """
         ))
-        titleElements.append(checkboxDatatrace)
+        checkboxSignalsList.append(checkboxDatatrace)
 
-    titleLine = row(
-        titleElements,
+    checkboxSignalsRow = row(
+        checkboxSignalsList,
+        width_policy='min',
+        height_policy='min',
+    )
+
+    checkboxCol = column(
+        [checkboxGeneralRow, checkboxSignalsRow],
+        width_policy='min',
+        height_policy='min',
+    )
+    titleElementsList.append(checkboxCol)
+
+    titleElementsRow = row(
+        titleElementsList,
         sizing_mode='scale_width',
         align='start',
     )
+
 
     # make sure centerline stays in center if window is resized
     updateCenterlineCallback = CustomJS(
@@ -790,7 +816,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
 
     # put together final layout of page
     finalLayout = column(
-        [titleLine, grid],
+        [titleElementsRow, grid],
         # [grid],
         sizing_mode='scale_both',
     )
