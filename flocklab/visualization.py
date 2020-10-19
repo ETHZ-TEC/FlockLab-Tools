@@ -15,6 +15,8 @@ from copy import copy
 from bokeh.plotting import figure, show, save, output_file
 from bokeh.models import ColumnDataSource, Plot, Span, BoxAnnotation, CrosshairTool, HoverTool, CustomJS, Div, Select, CheckboxButtonGroup, CustomJSHover
 from bokeh.models.glyphs import VArea, Line, Circle
+from bokeh.models.renderers import GlyphRenderer
+from bokeh.models.ranges import DataRange1d
 from bokeh.layouts import gridplot, row, column, layout, Spacer
 from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpurple, mediumspringgreen, grey
 from bokeh.events import Tap, DoubleTap, ButtonClick
@@ -95,6 +97,7 @@ def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     p = figure(
         title=None,
         x_range=prevPlot.x_range if prevPlot is not None else None,
+        y_range=DataRange1d(only_visible=True), # enable auto scaling of plot to visible data instead to all plotted data
         # plot_width=1200,
         plot_height=900,
         min_border=0,
@@ -105,7 +108,6 @@ def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
         # output_backend="webgl",
     )
     length = len(nodeData)
-    vareas = []
     for i, (pin, pinData) in enumerate(nodeData.items()):
         if not 't' in pinData.keys():
             continue
@@ -114,12 +116,10 @@ def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
         source = ColumnDataSource(dict(t=t, y1=np.zeros_like(v)+length-i, y2=v+length-i))
         # plot areas
         vareaGlyph = VArea(x="t", y1="y1", y2="y2", fill_color=colorMapping(pin))
-        varea = p.add_glyph(source, vareaGlyph, name=signalName)
-        vareas += [(pin,[varea])]
-
+        varea = p.add_glyph(source, vareaGlyph, name=signalName) # name necessary for hover tooltip
         # plot lines (necessary for tooltip/hover and for visibility if zoomed out!)
         lineGlyph = Line(x="t", y="y2", line_color=colorMapping(pin).darken(0.2))
-        x = p.add_glyph(source, lineGlyph, name=signalName)
+        p.add_glyph(source, lineGlyph, name=signalName) # name necessary for hover tooltip
 
     hover = p.select(dict(type=HoverTool))
     hover.formatters={"@t": absoluteTimeFormatter}
@@ -150,6 +150,7 @@ def plotObserverPower(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     p = figure(
         title=None,
         x_range=prevPlot.x_range if prevPlot is not None else None,
+        y_range=DataRange1d(only_visible=True), # enable auto scaling of plot to visible data instead to all plotted data
         # plot_width=1200,
         plot_height=900,
         min_border=0,
@@ -198,6 +199,7 @@ def plotObserverDatatrace(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     p = figure(
         title=None,
         x_range=prevPlot.x_range if prevPlot is not None else None,
+        y_range=DataRange1d(only_visible=True), # enable auto scaling of plot to visible data instead to all plotted data
         plot_height=900,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
@@ -583,25 +585,24 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         ('10us', 10e-6),
         ('1us', 1e-6),
     ])
-    zoomSelect = Select(
-        # title='Zoom ',
+    quickzoomSelect = Select(
         options=list(zoomLut.keys()),
-        width=120,
-        width_policy='fixed',
-        height_policy='fit',
+        max_width=120,
+        width_policy='fit',
+        height_policy='min',
     )
-    zoomSelectCallback = CustomJS(
+    quickzoomSelectCallback = CustomJS(
         args={
             'zoomLut': zoomLut,
             'resetStr': list(zoomLut.keys())[0],
             'toggleCenterLineStr': list(zoomLut.keys())[1],
             'fitTraceStr': list(zoomLut.keys())[2],
             'p': timePlot,
-            'zoomSelect': zoomSelect,
+            'quickzoomSelect': quickzoomSelect,
             'vSpanMiddle': vline_middle,
         },
         code="""
-            // console.log(zoomSelect, cb_obj.value);
+            // console.log(quickzoomSelect, cb_obj.value);
             vSpanMiddle.location = 1/2*(p.inner_width);
             if (cb_obj.value == resetStr) {
                 // do nothing
@@ -616,11 +617,12 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 p.x_range.setv({"start": start, "end": end});
             }
             // reset drop-down
-            zoomSelect.value = resetStr;
+            quickzoomSelect.value = resetStr;
         """,
     )
-    zoomSelect.js_on_change('value', zoomSelectCallback)
+    quickzoomSelect.js_on_change('value', quickzoomSelectCallback)
 
+    ## checkboxes for services
     serviceNames = []
     if gpioPlots:
         serviceNames.append("GPIO")
@@ -629,7 +631,11 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     if datatracePlots:
         serviceNames.append("DT")
     serviceMap = dict([(name, serviceNames.index(name)) for name in serviceNames])
-    checkboxServices = CheckboxButtonGroup(labels=serviceNames, active=list(range(len(serviceNames))))
+    checkboxServices = CheckboxButtonGroup(
+        labels=serviceNames,
+        active=list(range(len(serviceNames))),
+        width_policy='min',
+    )
     checkboxServices.js_on_change('active', CustomJS(
         args={
             'gpioPlots': gpioPlots,
@@ -639,7 +645,6 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         },
         code="""
             // GPIO plots
-            console.log(serviceMap)
             if ('GPIO' in serviceMap) {
                 for (var nodeId in gpioPlots) {
                     gpioPlots[nodeId].visible = this.active.includes(serviceMap['GPIO']);
@@ -660,25 +665,85 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         """
     ))
 
-    checkboxNodes = CheckboxButtonGroup(labels=[str(nodeId) for nodeId in allNodeIds], active=list(range(len(allNodeIds))))
+    # checkboxes for nodes
+    checkboxNodes = CheckboxButtonGroup(
+        labels=[str(nodeId) for nodeId in allNodeIds],
+        active=list(range(len(allNodeIds))),
+        width_policy='min',
+    )
     checkboxNodes.js_on_change('active', CustomJS(
         args={
             'nodeIds': allNodeIds,
             'gridPlots': gridPlots,
         },
         code="""
-            console.log('checkboxNodes changed:', this.active);
+            // console.log('checkboxNodes changed:', this.active);
             for (var i=0; i<nodeIds.length; i++) {
                 gridPlots[i][0].visible = this.active.includes(i);
                 gridPlots[i][1].visible = this.active.includes(i);
             }
         """
     ))
-    # TODO: add checkboxes for GPIO lines
-    # TODO: add checkboxes for datatrace variables
+
+    # prepare title list elements
+    titleElements = [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, quickzoomSelect, checkboxServices, checkboxNodes]
+
+    # checkboxes for GPIO pins
+    if gpioPlots:
+        renderObjs = list(itertools.chain.from_iterable([p.select(GlyphRenderer) for p in gpioPlots.values()]))
+        gpioPins = sorted(list(set([g.name.split(' ')[0] for g in renderObjs])))
+        renderObjsDict = {}
+        for pin in gpioPins:
+            renderObjsDict[pin] = [g for g in renderObjs if pin == g.name.split(' ')[0]]
+        checkboxGpio = CheckboxButtonGroup(
+            labels=gpioPins,
+            active=list(range(len(gpioPins))),
+            width_policy='min',
+        )
+        checkboxGpio.js_on_change('active', CustomJS(
+            args={
+                'gpioPins': gpioPins,
+                'renderObjs': renderObjsDict,
+            },
+            code="""
+                for (var i=0; i<gpioPins.length; i++) {
+                    for (var k=0; k<renderObjs[gpioPins[i]].length; k++) {
+                        renderObjs[gpioPins[i]][k].visible = this.active.includes(i);
+                    }
+                }
+            """
+        ))
+        titleElements.append(checkboxGpio)
+
+    # checkboxes for datatrace variables
+    if datatracePlots:
+        renderObjs = list(itertools.chain.from_iterable([p.select(GlyphRenderer) for p in datatracePlots.values()]))
+        variables = sorted(list(set([g.name for g in renderObjs])))
+        renderObjsDict = {}
+        for variable in variables:
+            renderObjsDict[variable] = [g for g in renderObjs if variable == g.name]
+        checkboxDatatrace = CheckboxButtonGroup(
+            labels=variables,
+            active=list(range(len(variables))),
+            width_policy='min',
+        )
+        checkboxDatatrace.js_on_change('active', CustomJS(
+            args={
+                'variables': variables,
+                'renderObjs': renderObjsDict,
+            },
+            code="""
+                for (var i=0; i<variables.length; i++) {
+                    for (var k=0; k<renderObjs[variables[i]].length; k++) {
+                        renderObjs[variables[i]][k].visible = this.active.includes(i);
+                    }
+                }
+            """
+        ))
+        titleElements.append(checkboxDatatrace)
 
     titleLine = row(
-        [titleDiv, spaceDiv1, infoDiv, spaceDiv2, measureDiv, spaceDiv3, zoomSelect, checkboxServices, checkboxNodes],
+        titleElements,
         sizing_mode='scale_width',
         align='start',
     )
