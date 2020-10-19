@@ -167,11 +167,11 @@ def plotObserverPower(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
         p=nodeData['v']*nodeData['i'],
     ))
     line_i = Line(x="t", y="i", line_color='blue')
-    # line_v = Line(x="t", y="v", line_color='red')
+    line_v = Line(x="t", y="v", line_color='red')
     line_p = Line(x="t", y="p", line_color='black')
-    # p.add_glyph(source, line_i, name='{}'.format(nodeId))
-    # p.add_glyph(source, line_v, name='{}'.format(nodeId))
-    p.add_glyph(source, line_p, name='{}'.format(nodeId))
+    p.add_glyph(source, line_i, name='I (Node {})'.format(nodeId), visible=False)
+    p.add_glyph(source, line_v, name='V (Node {})'.format(nodeId), visible=False)
+    p.add_glyph(source, line_p, name='P (Node {})'.format(nodeId))
     hover = p.select(dict(type=HoverTool))
     hover.formatters={"@t": absoluteTimeFormatter}
     hover.tooltips = OrderedDict([
@@ -180,7 +180,7 @@ def plotObserverPower(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
       ('V', '@v{0.000000} V'),
       ('I', '@i{0.000000} mA'),
       ('Power', '@p{0.000000} mW'),
-      ('Node', '$name'),
+      ('Signal', '$name'),
     ])
 
     p.xgrid.grid_line_color = None
@@ -694,7 +694,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         gpioPins = sorted(list(set([g.name.split(' ')[0] for g in renderObjs])))
         renderObjsDict = {}
         for pin in gpioPins:
-            renderObjsDict[pin] = [g for g in renderObjs if pin == g.name.split(' ')[0]]
+            renderObjsDict[pin] = [r for r in renderObjs if pin == r.name.split(' ')[0]]
         checkboxGpio = CheckboxButtonGroup(
             labels=gpioPins,
             active=list(range(len(gpioPins))),
@@ -715,13 +715,40 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         ))
         titleElements.append(checkboxGpio)
 
+    # checkboxes for Power signals (I, V, P)
+    if powerPlots:
+        renderObjs = list(itertools.chain.from_iterable([p.select(GlyphRenderer) for p in powerPlots.values()]))
+        powerSignals = ['V', 'I', 'P']
+        renderObjsDict = {}
+        for signal in powerSignals:
+            renderObjsDict[signal] = [r for r in renderObjs if signal == r.name.split(' ')[0]]
+        checkboxPower = CheckboxButtonGroup(
+            labels=powerSignals,
+            active=[powerSignals.index('P')],
+            width_policy='min',
+        )
+        checkboxPower.js_on_change('active', CustomJS(
+            args={
+                'powerSignals': powerSignals,
+                'renderObjs': renderObjsDict,
+            },
+            code="""
+                for (var i=0; i<powerSignals.length; i++) {
+                    for (var k=0; k<renderObjs[powerSignals[i]].length; k++) {
+                        renderObjs[powerSignals[i]][k].visible = this.active.includes(i);
+                    }
+                }
+            """
+        ))
+        titleElements.append(checkboxPower)
+
     # checkboxes for datatrace variables
     if datatracePlots:
         renderObjs = list(itertools.chain.from_iterable([p.select(GlyphRenderer) for p in datatracePlots.values()]))
         variables = sorted(list(set([g.name for g in renderObjs])))
         renderObjsDict = {}
         for variable in variables:
-            renderObjsDict[variable] = [g for g in renderObjs if variable == g.name]
+            renderObjsDict[variable] = [r for r in renderObjs if variable == r.name]
         checkboxDatatrace = CheckboxButtonGroup(
             labels=variables,
             active=list(range(len(variables))),

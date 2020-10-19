@@ -66,6 +66,6 @@ Initial version
 ## Version 0.2.5 (xx.xx.xxxx)
 * visualization
   * quickzoom: changed zoom center to the middle of the plot, added centerline option
-  * added buttons to enable/disable plots
+  * added buttons to enable/disable plots (services, nodes, GPIO pins, power signals, datatrace variables)
   * added support for plotting datatrace data
   * added absolute time to hover info of all plots using CustomJSHover
