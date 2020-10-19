@@ -240,18 +240,21 @@ def plotObserverDatatrace(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
 
 def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, interactive=False):
     # determine gpio limits of timestamp value (for vertical lines)
-    maxT = 0
-    minT = np.inf
-    for nodeData in gpioData.values():
-        for pinData in nodeData.values():
-            if not 't' in pinData.keys():
-                continue
-            pinMax = pinData['t'].max()
-            pinMin = pinData['t'].min()
-            if pinMax > maxT:
-                maxT = pinMax
-            if pinMin < minT:
-                minT = pinMin
+    gpioLimits = None
+    if gpioData:
+        maxT = 0
+        minT = np.inf
+        for nodeData in gpioData.values():
+            for pinData in nodeData.values():
+                if not 't' in pinData.keys():
+                    continue
+                pinMax = pinData['t'].max()
+                pinMin = pinData['t'].min()
+                if pinMax > maxT:
+                    maxT = pinMax
+                if pinMin < minT:
+                    minT = pinMin
+        gpioLimits = (minT, maxT)
 
     ## plot all plots
     allPlots = []
@@ -266,26 +269,26 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
 
     # plot power data
     powerPlots = OrderedDict()
-    prevPlot = allPlots[-1] if allPlots else None
+    p = allPlots[-1] if allPlots else None
     for nodeId, nodeData in powerData.items():
-        p = plotObserverPower(nodeId, nodeData, prevPlot=prevPlot, absoluteTimeFormatter=absoluteTimeFormatter)
+        p = plotObserverPower(nodeId, nodeData, prevPlot=p, absoluteTimeFormatter=absoluteTimeFormatter)
         powerPlots.update( {nodeId: p} )
     allPlots += list(powerPlots.values())
 
     # plot datatrace data
     datatracePlots = OrderedDict()
-    prevPlot = allPlots[-1] if allPlots else None
+    p = allPlots[-1] if allPlots else None
     for nodeId, nodeData in datatraceData.items():
-        p = plotObserverDatatrace(nodeId, nodeData, prevPlot=prevPlot, absoluteTimeFormatter=absoluteTimeFormatter)
+        p = plotObserverDatatrace(nodeId, nodeData, prevPlot=p, absoluteTimeFormatter=absoluteTimeFormatter)
         datatracePlots.update( {nodeId: p} )
     allPlots += list(datatracePlots.values())
 
     ## time scale axis: create linked dummy plot to get shared x axis without scaling height of bottom most plot
     # figure out last plot for linking x-axis
-    prevPlot = allPlots[-1] if allPlots else None
+    p = allPlots[-1] if allPlots else None
     timePlot = figure(
         title=None,
-        x_range=prevPlot.x_range,
+        x_range=p.x_range,
         plot_height=0,
         min_border=0,
         tools=['xpan', 'xwheel_zoom', 'xbox_zoom', 'hover', 'reset'],
@@ -295,7 +298,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
         width_policy='fit',
         # output_backend="webgl",
     )
-    source = ColumnDataSource(dict(x=[0, maxT], y1=[0, 0], y2=[0, 0]))
+    source = ColumnDataSource(dict(x=[0, np.inf], y1=[0, 0], y2=[0, 0]))
     vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
     timePlot.add_glyph(source, vareaGlyph)
     timePlot.xgrid.grid_line_color = None
@@ -304,7 +307,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
     allPlots += [timePlot]
 
     # arrange all plots in grid and render it
-    createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum, (minT, maxT), interactive=interactive)
+    createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum, gpioLimits, interactive=interactive)
 
 def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum, gpioLimits, interactive=False):
     '''arrange all plots in grid, add tools, and render it
@@ -313,10 +316,11 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     # determine all nodeIds
     allNodeIds = sorted(list(set(list(gpioPlots.keys()) + list(powerPlots.keys()) + list(datatracePlots.keys()))))
 
-    # FIXME: handle case where no gpio data is available
+    # : handle case where no gpio data is available
     # vertical line for start and end of test
-    vline_start = Span(location=gpioLimits[0], dimension='height', line_color=(25,25,25,0.1), line_width=3)
-    vline_end = Span(location=gpioLimits[1], dimension='height', line_color=(25,25,25,0.1), line_width=3)
+    if gpioLimits is not None:
+        vline_start = Span(location=gpioLimits[0], dimension='height', line_color=(25,25,25,0.1), line_width=3)
+        vline_end = Span(location=gpioLimits[1], dimension='height', line_color=(25,25,25,0.1), line_width=3)
     # vertical line for quickzoom
     vline_middle = Span(location=0, dimension='height', line_color=(25,25,25,0.4), line_width=2, location_units='screen', render_mode='canvas', visible=False)
 
@@ -378,8 +382,9 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     ## add tools and utils to all plots
     for p in allPlots:
         # adding vlines
-        p.add_layout(vline_start)
-        p.add_layout(vline_end)
+        if gpioLimits is not None:
+            p.add_layout(vline_start)
+            p.add_layout(vline_end)
         p.add_layout(vline_middle)
 
         # time measuring
@@ -701,6 +706,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     checkboxSignalsList = []
 
     # checkboxes for GPIO pins
+    # FIXME: if gpio pin in the middle is disabled, space remains reserved and is not available for rest of the plot
     if gpioPlots:
         renderObjs = list(itertools.chain.from_iterable([p.select(GlyphRenderer) for p in gpioPlots.values()]))
         gpioPins = sorted(list(set([g.name.split(' ')[0] for g in renderObjs])))
