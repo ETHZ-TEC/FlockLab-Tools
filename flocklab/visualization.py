@@ -11,10 +11,12 @@ import os
 import sys
 import glob
 from copy import copy
+from xml.etree import ElementTree as et
+import json
 
 from bokeh.plotting import figure, show, save, output_file
 from bokeh.models import ColumnDataSource, Plot, Span, BoxAnnotation, CrosshairTool, HoverTool, CustomJS, Div, Select, CheckboxButtonGroup, CustomJSHover
-from bokeh.models.glyphs import VArea, Line, Circle
+from bokeh.models.glyphs import VArea, Line, Circle, Step
 from bokeh.models.renderers import GlyphRenderer
 from bokeh.models.ranges import DataRange1d
 from bokeh.layouts import gridplot, row, column, layout, Spacer
@@ -91,6 +93,25 @@ def trace2series(t, v):
     vNewNew = np.asarray(vNewNew)
 
     return (tNewNew, vNewNew)
+
+def get_dt_addr_to_var_map(resultPath):
+    '''Tries to read datatrace specific info from xml field `custom`. Always returns a dict (even if empty).
+    '''
+    try:
+        # read custom field in testconfig xml
+        ns = {'dummy': 'http://www.flocklab.ethz.ch'}
+        tree = et.parse(os.path.join(resultPath, 'testconfig.xml'))
+        ret = tree.findall('.//dummy:custom', namespaces=ns)
+        assert len(ret) == 1
+        d = json.loads(ret[0].text)
+        d = d['datatrace']['var_to_addr_map']
+        # reverse dict
+        d = {v:k for k,v in d.items()}
+    except Exception as e:
+        # we ignore any error since info is not essential, nevertheless it is important to return a dict() such that the mapping does not fail
+        return dict()
+    else:
+        return d
 
 def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     colors = ['blue', 'red', 'green', 'orange']
@@ -195,7 +216,7 @@ def plotObserverPower(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
 
     return p
 
-def plotObserverDatatrace(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
+def plotObserverDatatrace(nodeId, nodeData, prevPlot, absoluteTimeFormatter, allVariables):
     p = figure(
         title=None,
         x_range=prevPlot.x_range if prevPlot is not None else None,
@@ -208,17 +229,21 @@ def plotObserverDatatrace(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
         sizing_mode='stretch_both', # full screen
         # output_backend="webgl",
     )
-    colorMap = ['blue', 'red', 'green', 'black']
-    for i, (variable, trace) in enumerate(nodeData.items()):
+
+    colorMap = ['blue', 'red', 'green', 'black', 'cyan', 'yellowgreen', 'deepskyblue', 'indigo', 'orange', 'yellow']
+
+    for variable, trace in nodeData.items():
+        colorIdx = allVariables.index(variable)
+        color = colorMap[colorIdx%len(colorMap)]
         source = ColumnDataSource(dict(
           t=trace['t'],
           value=trace['value'],
           access=trace['access'],
           delay_marker=trace['delay_marker'],
         ))
-        line = Line(x="t", y="value", line_color=colorMap[i])
-        p.add_glyph(source, line, name='{}'.format(variable))
-        circle = Circle(x="t", y="value", size=4, line_color=colorMap[i], fill_color="white", line_width=1)
+        step = Step(x="t", y="value", line_color=color, mode='after')
+        p.add_glyph(source, step, name='{}'.format(variable))
+        circle = Circle(x="t", y="value", size=4, line_color=color, fill_color="white", line_width=1)
         p.add_glyph(source, circle, name='{}'.format(variable))
         hover = p.select(dict(type=HoverTool))
         hover.formatters={"@t": absoluteTimeFormatter}
@@ -278,8 +303,9 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
     # plot datatrace data
     datatracePlots = OrderedDict()
     p = allPlots[-1] if allPlots else None
+    allVariables = sorted(list(set(list(itertools.chain.from_iterable([nodeData.keys() for nodeId, nodeData in datatraceData.items()])))))
     for nodeId, nodeData in datatraceData.items():
-        p = plotObserverDatatrace(nodeId, nodeData, prevPlot=p, absoluteTimeFormatter=absoluteTimeFormatter)
+        p = plotObserverDatatrace(nodeId, nodeData, prevPlot=p, absoluteTimeFormatter=absoluteTimeFormatter, allVariables=allVariables)
         datatracePlots.update( {nodeId: p} )
     allPlots += list(datatracePlots.values())
 
@@ -1036,7 +1062,9 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
                   'access': variableGrp['access'].to_numpy(),
                   'delay_marker': variableGrp['delay_marker'].to_numpy(),
                 }
-                nodeData.update({variableName: trace})
+                addr_to_var_map = get_dt_addr_to_var_map(resultPath=resultPath)
+                variableNameMapped = addr_to_var_map[variableName] if variableName in addr_to_var_map else variableName
+                nodeData.update({variableNameMapped: trace})
             datatraceData.update({nodeId: nodeData})
 
     # set output file path

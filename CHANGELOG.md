@@ -69,3 +69,4 @@ Initial version
   * added buttons to enable/disable plots (services, nodes, GPIO pins, power signals, datatrace variables)
   * added support for plotting datatrace data
   * added absolute time to hover info of all plots using CustomJSHover
+  * mapping of datatrace addr to variables based on content in custom tag of testconfig.xml
