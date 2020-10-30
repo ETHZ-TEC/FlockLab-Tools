@@ -63,7 +63,7 @@ Initial version
   * automatically ceil duration of generalConf since only integers are allowed
   * fixed error message for gdbPort
 
-## Version 0.2.5 (xx.xx.xxxx)
+## Version 0.2.5 (30.10.2020)
 * visualization
   * quickzoom: changed zoom center to the middle of the plot, added centerline option
   * added buttons to enable/disable plots (services, nodes, GPIO pins, power signals, datatrace variables)
