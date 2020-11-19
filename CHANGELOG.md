@@ -75,3 +75,4 @@ Initial version
 * fix slow download of test results (prevent guessing of encoding for gzip responses)
 * visualization
   * added option to downsample powerprofiling in visualization
+  * reordered UI elements for saving horizontal space

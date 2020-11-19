@@ -521,7 +521,8 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
     titleDiv = Div(
         text='<h2 style="margin:0">FlockLab Test {testNum}</h2>'.format(testNum=testNum),
         # style={'background-color': 'yellow',},
-        height_policy='fit',
+        margin=(0, 5, 0, 5),
+        height_policy='min',
         width_policy='fit',
         align='center'
     )
@@ -529,31 +530,34 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         text='<div width="30px"></div>',
         style={'background-color': 'yellow'},
         width=30,
+        margin=(0, 5, 0, 5),
         width_policy='fixed',
-        height_policy='fit',
+        height_policy='min',
     )
     spaceDiv2 = Div(
         text='<div width="30px"></div>',
         style={'background-color': 'yellow'},
         width=30,
+        margin=(0, 5, 0, 5),
         width_policy='fixed',
-        height_policy='fit',
+        height_policy='min',
     )
     spaceDiv3 = Div(
         text='<div width="30px"></div>',
         style={'background-color': 'yellow'},
         width=30,
+        margin=(0, 5, 0, 5),
         width_policy='fixed',
-        height_policy='fit',
+        height_policy='min',
     )
     measureDiv = Div(
         text='''
-        <table>
+        <table style="border-collapse: collapse;">
           <tr>
-            <td width="100px" align="left">
+            <td width="100px" align="left" rowspan="2", style="padding: 0; margin: 0;">
               <div class="tooltip" style="vertical-align:middle; cursor:default; color:grey; font-size: 23px; padding: 2px;">&#9432;<span class="tooltiptext"><b>Set marker</b>:<br/>enable &#9312; or &#9313; + click into plot<br/><b>Remove markers</b>:<br/>disable &#9312; and &#9313; + click into plot<br/><b>Reset plot</b>:<br/>double-click inside plot</span></div>
             </td>
-            <td width="20px" align="left">
+            <td width="20px" align="left" style="padding: 0; margin: 0;">
               <span id="marker1" style="padding: 2px; cursor:default; color:grey; font-size: 25px;" onclick="(function() {
                 if (document.getElementById('marker1').style.color == 'grey') {
                     document.getElementById('marker1').style.color='black';
@@ -564,10 +568,21 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 document.getElementById('marker2').style.color='grey';
                 })();">&#9312;</span>
             </td>
-            <td width="110px" align="left">
-              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_start_span">&nbsp</span>
+            <td width="110px" align="left" style="padding: 0; margin: 0;">
+              <span style="text-align: right; border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_start_span">&nbsp</span>
             </td>
-            <td width="20px" align="left">
+            <td width="10px" align="left" style="padding: 0; margin: 0;">
+              <span style="display: inline-block; width: 10px;">&nbsp;</span>
+            </td>
+            <td width="20px" align="left" rowspan="2" style="padding: 0; margin: 0;">
+              <span style="padding: 2px; cursor:default; color:grey; font-size: 25px;">&#916;</span>
+            </td>
+            <td width="110px" align="left" rowspan="2" style="padding: 0; margin: 0;">
+              <span style="text-align: right; border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_diff_span">&nbsp</span>
+            </td>
+          </tr>
+          <tr>
+            <td width="20px" align="left" style="padding: 0; margin: 0;">
               <span id="marker2" style="padding: 2px; cursor:default; color:grey; font-size: 25px;"  onclick="(function() {
                 if (document.getElementById('marker2').style.color == 'grey') {
                     document.getElementById('marker2').style.color='black';
@@ -578,21 +593,16 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 document.getElementById('marker1').style.color='grey';
                 })();">&#9313;</span>
             </td>
-            <td width="110px" align="left">
-              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_end_span">&nbsp</span>
-            </td>
-            <td width="20px" align="left">
-              <span style="padding: 2px; cursor:default; color:grey; font-size: 25px;">&#916;</span>
-            </td>
-            <td width="110px" align="left">
-              <span style="border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_diff_span">&nbsp</span>
+            <td width="110px" align="left" style="padding: 0; margin: 0;">
+              <span style="text-align: right; border: 2px solid grey; padding: 2px; border-radius: 3px; display: inline-block; width: 100px;" id="marker_end_span">&nbsp</span>
             </td>
           </tr>
         </table>''' + '{}'.format(tooltipStyle),
         # style={'background-color': 'yellow'},
         align='center',
+        margin=(0, 5, 0, 5),
         width_policy='min',
-        height_policy='fit',
+        height_policy='min',
     )
 
     zoomLut = OrderedDict([
@@ -615,6 +625,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
         options=list(zoomLut.keys()),
         align='center',
         max_width=120,
+        margin=(0, 5, 0, 5),
         width_policy='fit',
         height_policy='min',
     )
