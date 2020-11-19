@@ -293,12 +293,17 @@ class Flocklab:
             if req.status_code != 200:
                 raise FlocklabError('Downloading testresults failed (status code: {})'.format(req.status_code))
 
-            if '"error"' in req.text:
+            # encoding is required to decode when accessing data with req.text -> currently guessing is ok since it is only required if content-type is text/html
+            # req.encoding = 'utf-8' # explicitly set expected encoding since automatic detection ("encoding will be guessed using chardet") is very slow, especially with large files!
+            if 'text/html' in req.headers['content-type']: # NOTE: full contenty-type string is usually 'text/html; charset=UTF-8'
                 output = json.loads(req.text)["output"]
                 raise FlocklabError('FlockLab API Error: {}'.format(output))
+            elif 'application/x-gzip' in req.headers['content-type']:
+                with open('flocklab_testresults_{}.tar.gz'.format(testId), 'wb') as f:
+                    f.write(req.content)
+            else:
+                raise FlocklabError('Server response contains unexpected response content-type: {}'.format(req.headers['content-type']))
 
-            with open('flocklab_testresults_{}.tar.gz'.format(testId), 'wb') as f:
-                f.write(req.content)
             print("extracting archive ...")
             with tarfile.open('flocklab_testresults_{}.tar.gz'.format(testId)) as tar:
                 tar.extractall()

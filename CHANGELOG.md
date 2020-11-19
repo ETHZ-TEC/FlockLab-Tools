@@ -70,3 +70,6 @@ Initial version
   * added support for plotting datatrace data
   * added absolute time to hover info of all plots using CustomJSHover
   * mapping of datatrace addr to variables based on content in custom tag of testconfig.xml
+
+## Version 0.2.6 (xx.xx.xxxx)
+* fix slow download of test results (prevent guessing of encoding for gzip responses)
