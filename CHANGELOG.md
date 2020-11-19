@@ -73,3 +73,5 @@ Initial version
 
 ## Version 0.2.6 (xx.xx.xxxx)
 * fix slow download of test results (prevent guessing of encoding for gzip responses)
+* visualization
+  * added option to downsample powerprofiling in visualization

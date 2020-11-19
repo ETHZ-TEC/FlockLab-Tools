@@ -861,7 +861,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
 
 
 
-def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPps=False, showRst=False):
+def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPps=False, showRst=False, downsamplingFactor=1):
     '''Plots FlockLab results using bokeh.
     Args:
         resultPath: path to the flocklab results (unzipped)
@@ -1040,9 +1040,9 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
         for nodeId, nodeGrp in powerDf.groupby('node_id'):
             # print(nodeId)
             trace = {
-              't': nodeGrp['timestampRelative'].to_numpy(),
-              'i': nodeGrp['current_mA'].to_numpy(),
-              'v': nodeGrp['voltage_V'].to_numpy(),
+              't': nodeGrp['timestampRelative'].to_numpy()[::downsamplingFactor],
+              'i': nodeGrp['current_mA'].to_numpy()[::downsamplingFactor],
+              'v': nodeGrp['voltage_V'].to_numpy()[::downsamplingFactor],
             }
             powerData.update({nodeId: trace})
 

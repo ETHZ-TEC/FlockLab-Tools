@@ -38,6 +38,7 @@ def main():
     parser.add_argument('-o', '--observers', metavar='<platform>', help='get a list of the currently available (online) observers')
     parser.add_argument('-p', '--platforms', help='get a list of the available platforms', action='store_true', default=False)
     parser.add_argument('-x', '--visualize', metavar='<result directory>', help='Visualize FlockLab result data', type=str, nargs='?') # default unfortunately does not work properly together with nargs
+    parser.add_argument('-s', '--downsampling', metavar='<factor>', help='downsampling factor for power profiling data in visualization', type=int, default=1)
     parser.add_argument('-y', '--develop', help='Enable develop output (incl. develop signals (nRST, PPS) in visualization)', action='store_true', default=False)
     parser.add_argument('-V', '--version', help='Print version number', action='store_true', default=False)
 
@@ -66,7 +67,7 @@ def main():
     elif args.platforms:
         ret = fl.getPlatforms()
     elif args.visualize is not None:
-        visualizeFlocklabTrace(resultPath=args.visualize, interactive=True, showPps=args.develop, showRst=args.develop)
+        visualizeFlocklabTrace(resultPath=args.visualize, interactive=True, showPps=args.develop, showRst=args.develop, downsamplingFactor=args.downsampling)
     elif args.version:
         ret = __version__
     else:
