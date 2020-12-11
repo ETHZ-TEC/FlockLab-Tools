@@ -71,7 +71,7 @@ Initial version
   * added absolute time to hover info of all plots using CustomJSHover
   * mapping of datatrace addr to variables based on content in custom tag of testconfig.xml
 
-## Version 0.2.6 (xx.xx.xxxx)
+## Version 0.2.6 (11.12.2020)
 * fix slow download of test results (prevent guessing of encoding for gzip responses)
 * fix serial2Df() function
 * visualization

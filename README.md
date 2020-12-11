@@ -58,17 +58,21 @@ python -m flocklab -h
                       abort test
 -d <testid>, --delete <testid>
                       delete test
+-i <testid>, --info <testid>
+                      get test info
 -g <testid>, --get <testid>
                       get test results (via https)
 -f <testid>, --fetch <testid>
                       fetch test results (via webdav) [NOT IMPLEMENTED YET!]
 -o <platform>, --observers <platform>
-                      get a list of the currently available (online)
-                      observers
+                      get a list of the currently available (online) observers
 -p, --platforms       get a list of the available platforms
--x <result directory>, --visualize <result directory>
+-x [<result directory>], --visualize [<result directory>]
                       Visualize FlockLab result data
-
+-s <factor>, --downsampling <factor>
+                      downsampling factor for power profiling data in visualization
+-y, --develop         Enable develop output (incl. develop signals (nRST, PPS) in visualization)
+-V, --version         Print version number
 ```
 
 #### Visualization of FlockLab Results
