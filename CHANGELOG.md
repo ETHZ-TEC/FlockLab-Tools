@@ -73,6 +73,7 @@ Initial version
 
 ## Version 0.2.6 (xx.xx.xxxx)
 * fix slow download of test results (prevent guessing of encoding for gzip responses)
+* fix serial2Df() function
 * visualization
   * added option to downsample powerprofiling in visualization
-  * reordered UI elements for saving horizontal space
+  * reordered UI elements to save horizontal space

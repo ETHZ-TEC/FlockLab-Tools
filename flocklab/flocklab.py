@@ -407,15 +407,16 @@ class Flocklab:
         Returns:
             serial log as pandas dataframe
         '''
-        if os.path.isdir(serialPath):
-            serialFilename = os.path.join(serialPath, serialFilename)
-        else:
-            raise RuntimeError('The provided path is not valid: %s'%serialPath)
+        if os.path.splitext(serialFilename)[1] != '.csv':
+            if os.path.isdir(serialPath):
+                serialPath = os.path.join(serialPath, serialFilename)
+            else:
+                raise RuntimeError('The provided path is not valid: %s' % serialPath)
 
-        if not os.path.isfile(serialFilename):
-            raise RuntimeError('The file not exist : %s'%serialFilename)
+        if not os.path.isfile(serialPath):
+            raise RuntimeError('The file does not exist: %s' % serialFilename)
 
-        with open(serialFilename, 'r', encoding='utf-8', errors='replace') as f:
+        with open(serialPath, 'r', encoding='utf-8', errors='replace') as f:
             ll = []
             header_processed = False
             for line in f.readlines():
