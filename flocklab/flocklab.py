@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import appdirs
 from getpass import getpass
+from xml.etree import ElementTree as et
+import io
 
 ################################################################################
 
@@ -407,7 +409,7 @@ class Flocklab:
         Returns:
             serial log as pandas dataframe
         '''
-        if os.path.splitext(serialFilename)[1] != '.csv':
+        if os.path.splitext(serialPath)[1] != '.csv':
             if os.path.isdir(serialPath):
                 serialPath = os.path.join(serialPath, serialFilename)
             else:
@@ -416,27 +418,65 @@ class Flocklab:
         if not os.path.isfile(serialPath):
             raise RuntimeError('The file does not exist: %s' % serialFilename)
 
-        with open(serialPath, 'r', encoding='utf-8', errors='replace') as f:
+        with open(serialPath, 'rb') as f:
+            buf = f.read()
+            # replace carriage returns (e.g. contained in corrupted radio messages) as they are interpreted as newline by readlines(), flocklab serial output does never contain carriage return for line break as flocklab converts all CRLF into LF (\r\n -> \n)
+            buf = buf.replace(bytes(u'\r', encoding='utf8'), bytes(u'', encoding='utf8')) # removes all carriage returns ('\r' or u'\u000d')
+            f2 = io.StringIO(buf.decode(encoding='utf-8', errors='replace'))
+            # read data into dataframe
             ll = []
             header_processed = False
-            for line in f.readlines():
+            for line in f2.readlines():
                 if not header_processed:
                     cols = line.rstrip().split(',')
                     assert len(cols) == 5
                     header_processed = True
                     continue
                 parts = line.rstrip().split(',')
-                if len(parts) > 0:
+                if len(parts) >= 5:
                     ll.append(OrderedDict([
-                      (cols[0], parts[0]),                  # timestamp
-                      (cols[1], int(parts[1])),             # observer_id
+                      (cols[0], parts[0]),                 # timestamp
+                      (cols[1], int(parts[1])),            # observer_id
                       (cols[2], int(parts[2])),            # node_id
                       (cols[3], parts[3]),                 # direction
                       (cols[4], ','.join(parts[4:])),      # output
                     ]))
+                else:
+                    raise Exception('ERROR: line does not contain enough columns: {}'.format(line))
         df = pd.DataFrame.from_dict(ll)
         df.columns
         return df
+
+    @staticmethod
+    def get_custom_field(resultPath):
+        '''Tries to read info from xml field `custom`.
+        '''
+        try:
+            # read custom field in testconfig xml
+            ns = {'dummy': 'http://www.flocklab.ethz.ch'}
+            tree = et.parse(os.path.join(resultPath, 'testconfig.xml'))
+            ret = tree.findall('.//dummy:custom', namespaces=ns)
+            assert len(ret) == 1
+        except Exception as e:
+            return None
+        else:
+            return ret[0].text
+
+    @staticmethod
+    def get_dt_addr_to_var_map(resultPath):
+        '''Tries to read datatrace specific info from xml field `custom`. Always returns a dict (even if empty).
+        '''
+        try:
+            custom = Flocklab.get_custom_field(resultPath)
+            d = json.loads(custom)
+            d = d['datatrace']['var_to_addr_map']
+            # reverse dict
+            d = {v:k for k,v in d.items()}
+        except Exception as e:
+            # we ignore any error since info is not essential, nevertheless it is important to return a dict() such that the mapping does not fail
+            return dict()
+        else:
+            return d
 
 
 ################################################################################

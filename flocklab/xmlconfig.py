@@ -81,7 +81,7 @@ class FlocklabXmlConfig():
                 else:
                     print('Image last modified: {}'.format(datetime.datetime.fromtimestamp(os.path.getmtime(config.imagePath))))
 
-        print('Used nodes (all): {}'.format(list(set(allNodes))))
+        print('Used nodes (all): {}'.format(sorted(list(set(allNodes)))))
 
         # concatenate config sections
         for config in self.configList:

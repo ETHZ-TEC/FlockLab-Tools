@@ -11,7 +11,6 @@ import os
 import sys
 import glob
 from copy import copy
-from xml.etree import ElementTree as et
 import json
 
 from bokeh.plotting import figure, show, save, output_file
@@ -24,7 +23,8 @@ from bokeh.colors.named import red, green, blue, orange, lightskyblue, mediumpur
 from bokeh.events import Tap, DoubleTap, ButtonClick
 
 from .flocklab import FlocklabError
-
+from flocklab import Flocklab
+fl = Flocklab()
 
 ###############################################################################
 
@@ -93,25 +93,6 @@ def trace2series(t, v):
     vNewNew = np.asarray(vNewNew)
 
     return (tNewNew, vNewNew)
-
-def get_dt_addr_to_var_map(resultPath):
-    '''Tries to read datatrace specific info from xml field `custom`. Always returns a dict (even if empty).
-    '''
-    try:
-        # read custom field in testconfig xml
-        ns = {'dummy': 'http://www.flocklab.ethz.ch'}
-        tree = et.parse(os.path.join(resultPath, 'testconfig.xml'))
-        ret = tree.findall('.//dummy:custom', namespaces=ns)
-        assert len(ret) == 1
-        d = json.loads(ret[0].text)
-        d = d['datatrace']['var_to_addr_map']
-        # reverse dict
-        d = {v:k for k,v in d.items()}
-    except Exception as e:
-        # we ignore any error since info is not essential, nevertheless it is important to return a dict() such that the mapping does not fail
-        return dict()
-    else:
-        return d
 
 def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
     colors = ['blue', 'red', 'green', 'orange']
@@ -1073,7 +1054,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
                   'access': variableGrp['access'].to_numpy(),
                   'delay_marker': variableGrp['delay_marker'].to_numpy(),
                 }
-                addr_to_var_map = get_dt_addr_to_var_map(resultPath=resultPath)
+                addr_to_var_map = fl.get_dt_addr_to_var_map(resultPath=resultPath)
                 variableNameMapped = addr_to_var_map[variableName] if variableName in addr_to_var_map else variableName
                 nodeData.update({variableNameMapped: trace})
             datatraceData.update({nodeId: nodeData})

@@ -77,3 +77,7 @@ Initial version
 * visualization
   * added option to downsample powerprofiling in visualization
   * reordered UI elements to save horizontal space
+
+## Version 0.2.7 (xx.xx.xxxx)
+* add read_custom_field() function
+* fixed serial2Df (use correct path & properly handle serial logs which contain carriage returns)
