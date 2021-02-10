@@ -173,8 +173,6 @@ class SerialConf():
     def config2Et(self, x):
         if self.obsIds is None:
             raise Exception('ERROR: obsIds of SerialConf needs to be set!')
-        if self.remoteIp is None:
-            self.remoteIp = '0.0.0.0' # useless for forwarding but prevents problems with gpiotracing if by default an IPv6 address is set
 
         x.append(et.Comment(FlocklabXmlConfig.extendTitle('Serial Configuration')))
         sc = FlocklabXmlConfig.addSubElement(x, 'serialConf')
@@ -189,7 +187,8 @@ class SerialConf():
                 pass
             else:
                 raise Exception('ERROR: Invalid serial config!')
-        FlocklabXmlConfig.addSubElement(sc, 'remoteIp', text=self.remoteIp)
+        if self.remoteIp is not None:
+            FlocklabXmlConfig.addSubElement(sc, 'remoteIp', text=self.remoteIp)
         return x
 
 class GpioTracingConf():

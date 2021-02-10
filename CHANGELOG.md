@@ -81,3 +81,5 @@ Initial version
 ## Version 0.2.7 (xx.xx.xxxx)
 * add read_custom_field() function
 * fixed serial2Df (use correct path & properly handle serial logs which contain carriage returns)
+* xml config
+  * no longer add `remoteIp` field in xml if no value specified (to improve serial logging performance)
