@@ -21,6 +21,8 @@ import appdirs
 from getpass import getpass
 from xml.etree import ElementTree as et
 import io
+from elftools.elf.elffile import ELFFile   # requires packege "pyelftools"
+import struct
 
 ################################################################################
 
@@ -448,7 +450,7 @@ class Flocklab:
         return df
 
     @staticmethod
-    def get_custom_field(resultPath):
+    def getCustomField(resultPath):
         '''Tries to read info from xml field `custom`.
         '''
         try:
@@ -463,11 +465,11 @@ class Flocklab:
             return ret[0].text
 
     @staticmethod
-    def get_dt_addr_to_var_map(resultPath):
+    def getDtAddrToVarMap(resultPath):
         '''Tries to read datatrace specific info from xml field `custom`. Always returns a dict (even if empty).
         '''
         try:
-            custom = Flocklab.get_custom_field(resultPath)
+            custom = Flocklab.getCustomField(resultPath)
             d = json.loads(custom)
             d = d['datatrace']['var_to_addr_map']
             # reverse dict
@@ -477,6 +479,115 @@ class Flocklab:
             return dict()
         else:
             return d
+
+    @staticmethod
+    def structSizeMap(numBytes):
+        if numBytes == 1: return 'B'
+        elif numBytes == 2: return 'H'
+        elif numBytes == 4: return 'I'
+        elif numBytes == 8: return 'Q'
+        else: raise Exception('Undefined number of bytes!')
+
+    @staticmethod
+    def getSymbolAddress(elfPath, symbName):
+        '''Get the address of the symbol with name symbName from ELF file elfPath.
+        Args:
+            elfPath:  Path to the elf file
+            symbName: Name of the symbol
+        Returns:
+            Address
+        '''
+        with open(elfPath, 'rb') as f:
+            elf = ELFFile(f)
+            symtab = elf.get_section_by_name('.symtab')
+            if not symtab:
+                raise Exception('ELF file does not contain a symbol table!')
+            sym = symtab.get_symbol_by_name(varname)
+
+            if sym is None or len(sym) == 0:
+                raise Exception('Symbol "{}" not found!'.format(symbName))
+            elif len(sym) > 1:
+                raise Exception('Found multiple entries for Symbol "{}"!'.format(symbName))
+            return sym[0]['st_value']
+
+    @staticmethod
+    def getSymbolFileOffsetAndSize(elfPath, symbName):
+        '''Get the file offset (in bytes) and the size of the symbol with name symbName from ELF file elfPath.
+        Args:
+            elfPath:  Path to the elf file
+            symbName: Name of the symbol
+        Returns:
+            File offset (in bytes)
+        '''
+        fileOffset = None
+        symbSize = None
+
+        with open(elfPath, 'rb') as f:
+            elf = ELFFile(f)
+
+            # read symbol table
+            symtab = elf.get_section_by_name('.symtab')
+            if not symtab:
+                raise Exception('ELF file does not contain a symbol table!')
+
+            # get symbol & symbol size
+            symList = symtab.get_symbol_by_name(symbName)
+            if not symList:
+                raise Exception('Symbol "{}" not found!'.format(symbName))
+            sym = symList[0]
+            symbAddr = sym['st_value']
+            symbSize = sym['st_size']
+
+            # get file offset
+            fileOffset = next(elf.address_offsets(symbAddr), None)
+
+            if not fileOffset:
+                raise Exception('Could not determine file offset!')
+
+        return fileOffset, symbSize
+
+    @staticmethod
+    def readSymbolValue(elfPath, symbName, signed=False):
+        '''Read value of symbol symbName from elf file elfPath.
+        Args:
+            elfPath:  Path to the elf file in which the symbol will be replaced
+            symbName: Name of the symbol
+            signed:   If True, the symbol is assumed to be a signed integer, otherwise the symbol is assumed to be an unsigned integer (default: False)
+        Returns:
+            Value of symbol
+        '''
+        value = None
+
+        with open(elfPath, 'rb') as f:
+            elf = ELFFile(f)
+            fileOffset, symbSize = Flocklab.getSymbolFileOffsetAndSize(elfPath, symbName)
+            elf.stream.seek(fileOffset)
+            if signed:
+                value = struct.unpack(Flocklab.structSizeMap(symbSize).lower(), elf.stream.read(symbSize))[0]
+            else:
+                value = struct.unpack(Flocklab.structSizeMap(symbSize), elf.stream.read(symbSize))[0]
+
+        return value
+
+    @staticmethod
+    def writeSymbolValue(elfPath, symbName, symbReplace, signed=False):
+        '''Searches symbol symbName in ELF file elfPath and replaces its value with symbReplace.
+        Args:
+            elfPath:        Path to the elf file in which the symbol will be replaced
+            symbName:       Name of the symbol whose value will be replaced
+            symbReplace:    Replacement value (int)
+            signed:         If True, the symbol is assumed to be a signed integer, otherwise the symbol is assumed to be an unsigned integer (default: False)
+        '''
+        symbFileOffset, symbSize = Flocklab.getSymbolFileOffsetAndSize(elfPath, symbName)
+
+        with open(elfPath, 'rb+') as f:
+            f.seek(symbFileOffset)
+            if signed:
+                replaceBytes = struct.pack(Flocklab.structSizeMap(symbSize).lower(), symbReplace)
+            else:
+                replaceBytes = struct.pack(Flocklab.structSizeMap(symbSize), symbReplace)
+            f.write(replaceBytes)
+            f.close()
 
 
 ################################################################################

@@ -40,6 +40,7 @@ setuptools.setup(
         'requests',
         'appdirs',
         'rocketlogger',
+        'pyelftools',
     ],
     classifiers=(
         "Programming Language :: Python :: 3",
