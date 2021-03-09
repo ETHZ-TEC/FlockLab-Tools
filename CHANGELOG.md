@@ -82,5 +82,6 @@ Initial version
 * add readCustomField() function
 * fixed serial2Df (use correct path & properly handle serial logs which contain carriage returns)
 * added functions to read and write symbol values in ELF files (binary patching)
+* added option to specify download directory for getResults()
 * xml config
   * no longer add `remoteIp` field in xml if no value specified (to improve serial logging performance)

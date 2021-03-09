@@ -266,10 +266,11 @@ class Flocklab:
             print(e)
             print("ERROR: Failed to contact the FlockLab API!")
 
-    def getResults(self, testId):
+    def getResults(self, testId, outDir='./'):
         '''Download FlockLab test results via https.
         Args:
             testId: ID of the test which should be downloaded
+            outDir: Download directory (default: current working path)
         Returns:
             Success of download as string.
         '''
@@ -303,14 +304,14 @@ class Flocklab:
                 output = json.loads(req.text)["output"]
                 raise FlocklabError('FlockLab API Error: {}'.format(output))
             elif 'application/x-gzip' in req.headers['content-type']:
-                with open('flocklab_testresults_{}.tar.gz'.format(testId), 'wb') as f:
+                with open(os.path.join(outDir, 'flocklab_testresults_{}.tar.gz'.format(testId)), 'wb') as f:
                     f.write(req.content)
             else:
                 raise FlocklabError('Server response contains unexpected response content-type: {}'.format(req.headers['content-type']))
 
             print("extracting archive ...")
-            with tarfile.open('flocklab_testresults_{}.tar.gz'.format(testId)) as tar:
-                tar.extractall()
+            with tarfile.open(os.path.join(outDir, 'flocklab_testresults_{}.tar.gz'.format(testId))) as tar:
+                tar.extractall(path=outDir)
             return 'Successfully downloaded & extracted: flocklab_testresults_{}.tar.gz & {}'.format(testId, testId)
 
     def getTestInfo(self, testId):
