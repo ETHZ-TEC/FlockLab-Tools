@@ -1,12 +1,12 @@
 # FlockLab Tools
 
-This Python package provides tools for working with the [FlockLab testbed](https://flocklab.ethz.ch/). 
+This Python package provides tools for working with the [FlockLab 2 testbed](https://flocklab.ethz.ch/). 
 
 Features:
-* Python API for managing FlockLab tests
-* Command-line interface (CLI) for Interfacing with FlockLab
-* Programmatic creation of FlockLab test xml files (in python)
-* Visualization of FlockLab test results
+* Python API for managing FlockLab 2 tests
+* Command-line interface (CLI) for Interfacing with FlockLab 2
+* Programmatic creation of FlockLab 2 test xml files (in python)
+* Visualization of FlockLab 2 test results
 
 [PyPi Webpage](https://pypi.org/project/flocklab-tools/)  
 [Source Code](https://gitlab.ethz.ch/tec/public/flocklab/flocklab-tools)  
@@ -17,7 +17,13 @@ Features:
 Dependencies:
 * `python3.6+`
 * `setuptools`, `pkg_resources`, `pip`, `wheel` (usually pre-installed when using a virtual environment)
-* `rocketlogger` (optional, required if flocklab-tools is used to visualize test results containing powerprofiling data in the `rld` file format)
+* `numpy`
+* `pandas`
+* `bokeh`
+* `requests`
+* `appdirs`
+* `rocketlogger`
+* `pyelftools`
 
 Install with
 ```sh
@@ -85,8 +91,10 @@ flocklab -x <result directory>
 ### Python Support
 Example 
 ```python
-from flocklab import Flocklab as fl
+from flocklab import Flocklab
 from flocklab import *
+
+fl = Flocklab()
 
 testId = 0
 fl.getResults(testId)
@@ -116,7 +124,7 @@ You can edit the source files and the module will reflect the changes automatica
 ## License & Copyright
 This project is licensed under the BSD-3-Clause license. For details, see the  [LICENSE](https://gitlab.ethz.ch/tec/public/flocklab/flocklab-tools/-/blob/master/LICENSE) file.
 
-Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
+Copyright (c) 2021, ETH Zurich, Computer Engineering Group (TEC)
 
 ## List of Contributors
 * Roman Trub

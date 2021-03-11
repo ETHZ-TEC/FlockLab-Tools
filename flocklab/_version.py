@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
+Copyright (c) 2021, ETH Zurich, Computer Engineering Group (TEC)
 """
 
-__version__ = "0.2.6"
+__version__ = "0.2.7"

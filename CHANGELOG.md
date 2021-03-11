@@ -1,4 +1,4 @@
-Copyright (c) 2020, ETH Zurich, Computer Engineering Group (TEC)
+Copyright (c) 2021, ETH Zurich, Computer Engineering Group (TEC)
 
 # CHANGELOG - FlockLab Tools
 
@@ -78,8 +78,8 @@ Initial version
   * added option to downsample powerprofiling in visualization
   * reordered UI elements to save horizontal space
 
-## Version 0.2.7 (xx.xx.xxxx)
-* add readCustomField() function
+## Version 0.2.7 (11.03.2021)
+* added readCustomField() function
 * fixed serial2Df (use correct path & properly handle serial logs which contain carriage returns)
 * added functions to read and write symbol values in ELF files (binary patching)
 * added option to specify download directory for getResults()
