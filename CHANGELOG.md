@@ -85,3 +85,7 @@ Initial version
 * added option to specify download directory for getResults()
 * xml config
   * no longer add `remoteIp` field in xml if no value specified (to improve serial logging performance)
+
+## Version 0.2.8 (xx.xx.xxxx)
+* CLI
+  * removed unimplemented option to fetch test results via webdav

@@ -67,9 +67,7 @@ python -m flocklab -h
 -i <testid>, --info <testid>
                       get test info
 -g <testid>, --get <testid>
-                      get test results (via https)
--f <testid>, --fetch <testid>
-                      fetch test results (via webdav) [NOT IMPLEMENTED YET!]
+                      get test results
 -o <platform>, --observers <platform>
                       get a list of the currently available (online) observers
 -p, --platforms       get a list of the available platforms

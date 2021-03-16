@@ -33,8 +33,7 @@ def main():
     parser.add_argument('-a', '--abort', metavar='<testid>', help='abort test')
     parser.add_argument('-d', '--delete', metavar='<testid>', help='delete test')
     parser.add_argument('-i', '--info', metavar='<testid>', help='get test info')
-    parser.add_argument('-g', '--get', metavar='<testid>', help='get test results (via https)')
-    parser.add_argument('-f', '--fetch', metavar='<testid>', help='fetch test results (via webdav) [NOT IMPLEMENTED YET!]')
+    parser.add_argument('-g', '--get', metavar='<testid>', help='get test results')
     parser.add_argument('-o', '--observers', metavar='<platform>', help='get a list of the currently available (online) observers')
     parser.add_argument('-p', '--platforms', help='get a list of the available platforms', action='store_true', default=False)
     parser.add_argument('-x', '--visualize', metavar='<result directory>', help='Visualize FlockLab result data', type=str, nargs='?') # default unfortunately does not work properly together with nargs
@@ -59,9 +58,6 @@ def main():
         ret = fl.getTestInfo(args.info)
     elif args.get is not None:
         ret = fl.getResults(args.get)
-    elif args.fetch is not None:
-        # ret = fl.festResults(args.fetch)
-        ret = 'Sorry, this feature is not yet implemented!'
     elif args.observers is not None:
         ret = fl.getObsIds(args.observers)
     elif args.platforms:
