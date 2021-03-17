@@ -438,7 +438,7 @@ class Flocklab:
                 parts = line.rstrip().split(',')
                 if len(parts) >= 5:
                     ll.append(OrderedDict([
-                      (cols[0], parts[0]),                 # timestamp
+                      (cols[0], float(parts[0])),          # timestamp
                       (cols[1], int(parts[1])),            # observer_id
                       (cols[2], int(parts[2])),            # node_id
                       (cols[3], parts[3]),                 # direction

@@ -89,3 +89,4 @@ Initial version
 ## Version 0.2.8 (xx.xx.xxxx)
 * CLI
   * removed unimplemented option to fetch test results via webdav
+* convert timestamp to float in serial2Df 
