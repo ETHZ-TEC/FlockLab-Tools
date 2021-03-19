@@ -266,7 +266,7 @@ class Flocklab:
             print(e)
             print("ERROR: Failed to contact the FlockLab API!")
 
-    def getResults(self, testId, outDir='./'):
+    def getResults(self, testId, outDir='./', extract=True):
         '''Download FlockLab test results via https.
         Args:
             testId: ID of the test which should be downloaded
@@ -309,10 +309,13 @@ class Flocklab:
             else:
                 raise FlocklabError('Server response contains unexpected response content-type: {}'.format(req.headers['content-type']))
 
-            print("extracting archive ...")
-            with tarfile.open(os.path.join(outDir, 'flocklab_testresults_{}.tar.gz'.format(testId))) as tar:
-                tar.extractall(path=outDir)
-            return 'Successfully downloaded & extracted: flocklab_testresults_{}.tar.gz & {}'.format(testId, testId)
+            if extract:
+                print("extracting archive ...")
+                with tarfile.open(os.path.join(outDir, 'flocklab_testresults_{}.tar.gz'.format(testId))) as tar:
+                    tar.extractall(path=outDir)
+                return 'Successfully downloaded & extracted: flocklab_testresults_{}.tar.gz & {}'.format(testId, testId)
+            else:
+                return 'Successfully downloaded flocklab_testresults_{}.tar.gz'.format(testId)
 
     def getTestInfo(self, testId):
         '''Get information for an existing FlockLab test.
@@ -405,59 +408,73 @@ class Flocklab:
 
 
     @staticmethod
-    def serial2Df(serialPath, error='replace', serialFilename='serial.csv'):
+    def serial2Df(serialFile, error='replace', fileName='serial.csv'):
         '''Read a serial trace from a flocklab test result and convert it to a pandas dataframe.
         Args:
-            serialPath: path to serial trace result file (or flocklab result directory)
+            serialFile: File path or file pointer (binary read mode, 'rb') to serial logging file, or path to FockLab result directory containing the serial logging file
+            error:      How to handle binary to string decoding errors
+            fileName:   File name of the FlockLab serial logging file; used in case a string pointing to a test result directory is passed to serialFile (default: serial.csv)
         Returns:
             serial log as pandas dataframe
         '''
-        if os.path.splitext(serialPath)[1] != '.csv':
-            if os.path.isdir(serialPath):
-                serialPath = os.path.join(serialPath, serialFilename)
+        f = None
+        if type(serialFile)==str:
+            if os.path.isdir(serialFile):
+                serialFile = os.path.join(serialFile, fileName)
+            if not os.path.isfile(serialFile):
+                raise Exception('The file does not exist: {}'.format(serialFile))
+            f = open(serialFile, 'rb')
+        else:
+            f = serialFile
+
+        buf = f.read()
+        # replace carriage returns (e.g. contained in corrupted radio messages) as they are interpreted as newline by readlines(), flocklab serial output does never contain carriage return for line break as flocklab converts all CRLF into LF (\r\n -> \n)
+        buf = buf.replace(bytes(u'\r', encoding='utf8'), bytes(u'', encoding='utf8')) # removes all carriage returns ('\r' or u'\u000d')
+        f2 = io.StringIO(buf.decode(encoding='utf-8', errors='replace'))
+        # read data into dataframe
+        ll = []
+        header_processed = False
+        for line in f2.readlines():
+            if not header_processed:
+                cols = line.rstrip().split(',')
+                assert len(cols) == 5
+                header_processed = True
+                continue
+            parts = line.rstrip().split(',')
+            if len(parts) >= 5:
+                ll.append(OrderedDict([
+                  (cols[0], float(parts[0])),          # timestamp
+                  (cols[1], int(parts[1])),            # observer_id
+                  (cols[2], int(parts[2])),            # node_id
+                  (cols[3], parts[3]),                 # direction
+                  (cols[4], ','.join(parts[4:])),      # output
+                ]))
             else:
-                raise RuntimeError('The provided path is not valid: %s' % serialPath)
+                raise Exception('ERROR: line does not contain enough columns: {}'.format(line))
 
-        if not os.path.isfile(serialPath):
-            raise RuntimeError('The file does not exist: %s' % serialFilename)
+        if type(serialFile)==str:
+            f.close()
 
-        with open(serialPath, 'rb') as f:
-            buf = f.read()
-            # replace carriage returns (e.g. contained in corrupted radio messages) as they are interpreted as newline by readlines(), flocklab serial output does never contain carriage return for line break as flocklab converts all CRLF into LF (\r\n -> \n)
-            buf = buf.replace(bytes(u'\r', encoding='utf8'), bytes(u'', encoding='utf8')) # removes all carriage returns ('\r' or u'\u000d')
-            f2 = io.StringIO(buf.decode(encoding='utf-8', errors='replace'))
-            # read data into dataframe
-            ll = []
-            header_processed = False
-            for line in f2.readlines():
-                if not header_processed:
-                    cols = line.rstrip().split(',')
-                    assert len(cols) == 5
-                    header_processed = True
-                    continue
-                parts = line.rstrip().split(',')
-                if len(parts) >= 5:
-                    ll.append(OrderedDict([
-                      (cols[0], float(parts[0])),          # timestamp
-                      (cols[1], int(parts[1])),            # observer_id
-                      (cols[2], int(parts[2])),            # node_id
-                      (cols[3], parts[3]),                 # direction
-                      (cols[4], ','.join(parts[4:])),      # output
-                    ]))
-                else:
-                    raise Exception('ERROR: line does not contain enough columns: {}'.format(line))
         df = pd.DataFrame.from_dict(ll)
         df.columns
         return df
 
     @staticmethod
-    def getCustomField(resultPath):
+    def getCustomField(testConfigFile, testConfigFileName='testconfig.xml'):
         '''Tries to read info from xml field `custom`.
+        Args:
+            testConfigFile:      File path as string or file pointer of the FlockLab test config file, or file path (string) of a FlockLab test result directory
+            testConfigFileName:  File name of the FlockLab test config file; used in case a string pointing to a test result directory is passed to testConfigFile (default: testconfig.xml)
+        Returns:
+            Content of custom field in testconfig.xml as string.
         '''
+        if type(testConfigFile)==str and os.path.isdir(testConfigFile):
+            testConfigFile = os.path.join(testConfigFile, testConfigFileName)
+
         try:
             # read custom field in testconfig xml
             ns = {'dummy': 'http://www.flocklab.ethz.ch'}
-            tree = et.parse(os.path.join(resultPath, 'testconfig.xml'))
+            tree = et.parse(testConfigFile)
             ret = tree.findall('.//dummy:custom', namespaces=ns)
             assert len(ret) == 1
         except Exception as e:
@@ -466,11 +483,16 @@ class Flocklab:
             return ret[0].text
 
     @staticmethod
-    def getDtAddrToVarMap(resultPath):
+    def getDtAddrToVarMap(testConfigFile, testConfigFileName='testconfig.xml'):
         '''Tries to read datatrace specific info from xml field `custom`. Always returns a dict (even if empty).
+        Args:
+            testConfigFile:      File path as string or file pointer of the FlockLab test config file, or file path (string) of a FlockLab test result directory
+            testConfigFileName:  File name of the FlockLab test config file; used in case a string pointing to a test result directory is passed to testConfigFile (default: testconfig.xml)
+        Returns:
+            Dictionary with mapping of datatrace addresses to variables
         '''
         try:
-            custom = Flocklab.getCustomField(resultPath)
+            custom = Flocklab.getCustomField(testConfigFile, testConfigFileName)
             d = json.loads(custom)
             d = d['datatrace']['var_to_addr_map']
             # reverse dict
