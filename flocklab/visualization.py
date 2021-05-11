@@ -1054,7 +1054,7 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
                   'access': variableGrp['access'].to_numpy(),
                   'delay_marker': variableGrp['delay_marker'].to_numpy(),
                 }
-                addrToVarMap = fl.getDtAddrToVarMap(resultPath=resultPath)
+                addrToVarMap = fl.getDtAddrToVarMap(testConfigFile=resultPath)
                 variableNameMapped = addrToVarMap[variableName] if variableName in addrToVarMap else variableName
                 nodeData.update({variableNameMapped: trace})
             datatraceData.update({nodeId: nodeData})
