@@ -310,6 +310,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
     timePlot.add_glyph(source, vareaGlyph)
     timePlot.xgrid.grid_line_color = None
     timePlot.ygrid.grid_line_color = None
+    timePlot.xaxis.major_label_text_font_size = '10pt'
     timePlot.yaxis.visible = False
     allPlots += [timePlot]
 
@@ -418,6 +419,7 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
                 'width': '30px',
                 'height': '100%',
                 'text-align': 'center',
+                # 'font-size': '18px',
             },
             # sizing_mode='stretch_both',
             align='center',

@@ -91,3 +91,5 @@ Initial version
   * removed unimplemented option to fetch test results via webdav
 * convert timestamp to float in serial2Df()
 * adding support to read from file pointer (file path, file pointer, or path to results dir is accepted as input to getCustomField, getDtAddrToVarMap, serial2Df)
+* visualization
+  * adjusted font size of axis labels
