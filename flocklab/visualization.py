@@ -923,8 +923,10 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
             obsId = int(sp[1])
             nodeId = int(sp[2])
             tempDf = pd.DataFrame()
+            sys.stdout = open(os.devnull, 'w') # disable printout (to prevent  rocketlogger printout)
             rld = RocketLoggerData(powerRldFile)
             rld.merge_channels()
+            sys.stdout = sys.__stdout__ # re-enable printout
             ts = rld.get_time(absolute_time=True, time_reference='network')
             tempDf['timestamp'] = ts.astype('uint64') / 1e9   # convert to s
             tempDf['observer_id'] = obsId

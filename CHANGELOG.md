@@ -93,3 +93,4 @@ Initial version
 * adding support to read from file pointer (file path, file pointer, or path to results dir is accepted as input to getCustomField, getDtAddrToVarMap, serial2Df)
 * visualization
   * adjusted font size of axis labels
+  * added workaround to disable rocketlogger printout
