@@ -94,3 +94,5 @@ Initial version
 * visualization
   * adjusted font size of axis labels
   * added workaround to disable rocketlogger printout
+* explicitely specify version numbers of dependencies in package metadata
+* added license info to package metadata
