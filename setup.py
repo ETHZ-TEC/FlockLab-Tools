@@ -41,7 +41,7 @@ setuptools.setup(
         'bokeh>=2.1.1,<3.0',
         'requests>=2.22.0,<3.0',
         'appdirs>=1.4.3,<1.5',
-        'rocketlogger>=1.1.6,<1.99',
+        'rocketlogger>=2.0,<3.0',
         'pyelftools>=0.26,<1.0',
     ],
     classifiers=(

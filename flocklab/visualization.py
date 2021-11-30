@@ -27,6 +27,11 @@ from .flocklab import FlocklabError
 from flocklab import Flocklab
 fl = Flocklab()
 
+# ignore bokeh deprecation warning until color.darken in bokeh gets fixed
+import warnings
+from bokeh.util.warnings import BokehDeprecationWarning
+warnings.filterwarnings("ignore", category=BokehDeprecationWarning)
+
 ###############################################################################
 
 def addLinkedCrosshairs(plots):
@@ -96,7 +101,6 @@ def trace2series(t, v):
     return (tNewNew, vNewNew)
 
 def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
-    colors = ['blue', 'red', 'green', 'orange']
     p = figure(
         title=None,
         x_range=prevPlot.x_range if prevPlot is not None else None,
@@ -921,11 +925,9 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
             obsId = int(sp[1])
             nodeId = int(sp[2])
             tempDf = pd.DataFrame()
-            sys.stdout = open(os.devnull, 'w') # disable printout (to prevent  rocketlogger printout)
             rld = RocketLoggerData(powerRldFile)
             rld.merge_channels()
-            sys.stdout = sys.__stdout__ # re-enable printout
-            ts = rld.get_time(absolute_time=True, time_reference='network')
+            ts = rld.get_time(time_reference='network')
             tempDf['timestamp'] = ts.astype('uint64') / 1e9   # convert to s
             tempDf['observer_id'] = obsId
             tempDf['node_id'] = nodeId
