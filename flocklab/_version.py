@@ -3,4 +3,4 @@
 Copyright (c) 2021, ETH Zurich, Computer Engineering Group (TEC)
 """
 
-__version__ = "0.2.7"
+__version__ = "0.2.8"

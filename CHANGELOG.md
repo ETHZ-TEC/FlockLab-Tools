@@ -86,7 +86,7 @@ Initial version
 * xml config
   * no longer add `remoteIp` field in xml if no value specified (to improve serial logging performance)
 
-## Version 0.2.8 (xx.xx.xxxx)
+## Version 0.2.8 (30.11.2021)
 * CLI
   * removed unimplemented option to fetch test results via webdav
 * convert timestamp to float in serial2Df()
@@ -94,5 +94,5 @@ Initial version
 * visualization
   * adjusted font size of axis labels
   * added workaround to disable rocketlogger printout
-* explicitely specify version numbers of dependencies in package metadata
+* explicitly specify version numbers of dependencies in package metadata
 * added license info to package metadata

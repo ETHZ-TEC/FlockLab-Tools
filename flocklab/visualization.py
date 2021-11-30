@@ -12,6 +12,7 @@ import sys
 import glob
 from copy import copy
 import json
+from rocketlogger.data import RocketLoggerData
 
 from bokeh.plotting import figure, show, save, output_file
 from bokeh.models import ColumnDataSource, Plot, Span, BoxAnnotation, CrosshairTool, HoverTool, CustomJS, Div, Select, CheckboxButtonGroup, CustomJSHover
@@ -863,7 +864,6 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
         interactive: switch to turn on/off automatic display of generated bokeh plot
     '''
     # check if resultPath is not empty
-    print(resultPath)
     if resultPath.strip() == '' or resultPath is None:
         raise Exception('ERROR: No FlockLab result directory provided as argument!')
 
@@ -915,8 +915,6 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
 
             powerAvailable = True
     elif powerRldFiles:
-        from rocketlogger.data import RocketLoggerData
-
         powerDfList = []
         for powerRldFile in powerRldFiles:
             sp = os.path.basename(powerRldFile).split('.')
