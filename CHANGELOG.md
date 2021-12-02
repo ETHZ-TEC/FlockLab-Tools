@@ -100,3 +100,4 @@ Initial version
 ## Version 0.2.9 (xx.xx.xxxx)
 * upgraded used rocketlogger lib version
 * temporary workaround to disable BokehDeprecationWarning
+* removed workaround to disable rocketlogger printout as rocketlogger lib does no longer print info
