@@ -928,7 +928,8 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
             rld = RocketLoggerData(powerRldFile)
             rld.merge_channels()
             ts = rld.get_time(time_reference='network')
-            tempDf['timestamp'] = ts.astype('uint64') / 1e9   # convert to s
+            tempDf['timestamp'] = ts.astype(np.timedelta64) / np.timedelta64(1, 's')   # convert numpy.datetime64 timestamps into unix timestamps (numpy.float64 in seconds)
+            # tempDf['timestamp'] = ts.astype('uint64') / 1e9   # convert numpy.datetime64 timestamps into unix timestamps (numpy.float64 in seconds)
             tempDf['observer_id'] = obsId
             tempDf['node_id'] = nodeId
             tempDf['current_mA'] = rld.get_data('I1') * 1e3 # convert to mA
