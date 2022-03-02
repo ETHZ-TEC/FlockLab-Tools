@@ -101,3 +101,5 @@ Initial version
 * upgraded used rocketlogger lib version
 * temporary workaround to disable BokehDeprecationWarning
 * removed workaround to disable rocketlogger printout as rocketlogger lib does no longer print info
+* xml config: 
+  * added support for periodic actuation

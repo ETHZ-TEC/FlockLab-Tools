@@ -227,7 +227,10 @@ class GpioActuationConf():
             if type(pinConf) != dict:
                 raise Exception('ERROR: element of pinConfList must be of type \'dict\'!')
             if len(set(pinConf.keys()).intersection(set(['pin', 'level', 'offset']))) != 3:
-                raise Exception('ERROR: pinConfList must be a dict containing items \'pin\', \'level\', and \'offset\' values!')
+                raise Exception('ERROR: pinConfList item must be a dict containing items \'pin\', \'level\', and \'offset\'!')
+            remainingKeys = set(pinConf.keys()).difference(set(['pin', 'level', 'offset']))
+            if len(remainingKeys) and len(remainingKeys.intersection(set(['period', 'count']))) != 2:
+                raise Exception('ERROR: pinConfList item may optionally contain items \'period\' AND \'count\'!')
 
         x.append(et.Comment(FlocklabXmlConfig.extendTitle('GPIO Actuation Configuration')))
         gtc = FlocklabXmlConfig.addSubElement(x, 'gpioActuationConf')
@@ -241,6 +244,9 @@ class GpioActuationConf():
             FlocklabXmlConfig.addSubElement(pinConfXml, 'pin', text='{}'.format(pinConf['pin']))
             FlocklabXmlConfig.addSubElement(pinConfXml, 'level', text='{}'.format(pinConf['level']))
             FlocklabXmlConfig.addSubElement(pinConfXml, 'offset', text='{}'.format(pinConf['offset']))
+            if len(pinConf) == 5:
+                FlocklabXmlConfig.addSubElement(pinConfXml, 'period', text='{}'.format(pinConf['period']))
+                FlocklabXmlConfig.addSubElement(pinConfXml, 'count', text='{}'.format(pinConf['count']))
         return x
 
 
