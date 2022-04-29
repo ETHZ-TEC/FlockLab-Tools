@@ -21,7 +21,7 @@ import appdirs
 from getpass import getpass
 from xml.etree import ElementTree as et
 import io
-from elftools.elf.elffile import ELFFile   # requires packege "pyelftools"
+from elftools.elf.elffile import ELFFile   # requires package "pyelftools"
 import struct
 
 ################################################################################

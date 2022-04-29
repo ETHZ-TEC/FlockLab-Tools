@@ -97,9 +97,12 @@ Initial version
 * explicitly specify version numbers of dependencies in package metadata
 * added license info to package metadata
 
-## Version 0.2.9 (xx.xx.xxxx)
+## Version 0.2.9 (29.04.2022)
 * upgraded used rocketlogger lib version
 * temporary workaround to disable BokehDeprecationWarning
 * removed workaround to disable rocketlogger printout as rocketlogger lib does no longer print info
 * xml config: 
   * added support for periodic actuation
+
+## Version 0.2.10 (xx.xx.xxxx)
+-
