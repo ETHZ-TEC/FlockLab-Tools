@@ -306,7 +306,7 @@ class PowerProfilingConf():
         pc = FlocklabXmlConfig.addSubElement(x, 'powerProfilingConf')
         FlocklabXmlConfig.addSubElement(pc, 'obsIds', text=Flocklab.formatObsIds(self.obsIds))
         FlocklabXmlConfig.addSubElement(pc, 'offset', text='{}'.format(self.offset))
-        FlocklabXmlConfig.addSubElement(pc, 'duration', text='{}'.format(self.duration))
+        FlocklabXmlConfig.addSubElement(pc, 'duration', text='{}'.format(ceil(self.duration)))
         FlocklabXmlConfig.addSubElement(pc, 'samplingRate', text='{}'.format(int(self.samplingRate)))
         FlocklabXmlConfig.addSubElement(pc, 'fileFormat', text='{}'.format(self.fileFormat))
         return x

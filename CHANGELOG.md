@@ -105,4 +105,6 @@ Initial version
   * added support for periodic actuation
 
 ## Version 0.2.10 (xx.xx.xxxx)
--
+* visualization
+  * enabled WebGL for faster rendering (if supported)
+  * added support for downsampling factor 0 to skip power profiling data completely

@@ -112,7 +112,7 @@ def plotObserverGpio(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen
-        # output_backend="webgl",
+        output_backend="webgl",
     )
     length = len(nodeData)
     for i, (pin, pinData) in enumerate(nodeData.items()):
@@ -165,7 +165,7 @@ def plotObserverPower(nodeId, nodeData, prevPlot, absoluteTimeFormatter):
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen
-        # output_backend="webgl",
+        output_backend="webgl",
     )
     source = ColumnDataSource(dict(
         t=nodeData['t'],
@@ -213,7 +213,7 @@ def plotObserverDatatrace(nodeId, nodeData, prevPlot, absoluteTimeFormatter, all
         active_drag='xbox_zoom', # not working due to bokeh bug https://github.com/bokeh/bokeh/issues/8766
         active_scroll='xwheel_zoom',
         sizing_mode='stretch_both', # full screen
-        # output_backend="webgl",
+        output_backend="webgl",
     )
 
     colorMap = ['blue', 'red', 'green', 'black', 'cyan', 'yellowgreen', 'deepskyblue', 'indigo', 'orange', 'yellow']
@@ -308,7 +308,7 @@ def plotAll(gpioData, powerData, datatraceData, testNum, absoluteTimeFormatter, 
         active_scroll='xwheel_zoom',
         height_policy='fit',
         width_policy='fit',
-        # output_backend="webgl",
+        output_backend="webgl",
     )
     source = ColumnDataSource(dict(x=[0, np.inf], y1=[0, 0], y2=[0, 0]))
     vareaGlyph = VArea(x="x", y1="y1", y2="y2", fill_color='grey')
@@ -863,9 +863,12 @@ def createAppAndRender(gpioPlots, powerPlots, datatracePlots, timePlot, testNum,
 def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPps=False, showRst=False, downsamplingFactor=1):
     '''Plots FlockLab results using bokeh.
     Args:
-        resultPath: path to the flocklab results (unzipped)
-        outputDir:  directory to store the resulting html file in (default: current working directory)
+        resultPath:  path to the flocklab results (unzipped)
+        outputDir:   directory to store the resulting html file in (default: current working directory)
         interactive: switch to turn on/off automatic display of generated bokeh plot
+        showPps:     plot PPS pin values
+        showRst:     plot RST pin values
+        downsamplingFactor: downsample power profiling data to improve responsiveness (downsamplingFactor=0 means skip powerprofiling data completely)
     '''
     # check if resultPath is not empty
     if resultPath.strip() == '' or resultPath is None:
@@ -904,41 +907,42 @@ def visualizeFlocklabTrace(resultPath, outputDir=None, interactive=False, showPp
     requiredPowerCols = ['timestamp', 'node_id', 'current_mA', 'voltage_V']
     powerAvailable = False
 
-    if os.path.isfile(powerPath):
-        # Read power data csv to pandas dataframe (instruct pandas with float_precision to not sacrifice accuracy for the sake of speed)
-        powerDf = pd.read_csv(powerPath, float_precision='round_trip')
-        # sanity check: column names
-        for col in requiredPowerCols:
-            if not col in powerDf.columns:
-                raise Exception('ERROR: Required column ({}) in powerprofiling.csv file is missing.'.format(col))
+    if downsamplingFactor > 0:
+        if os.path.isfile(powerPath):
+            # Read power data csv to pandas dataframe (instruct pandas with float_precision to not sacrifice accuracy for the sake of speed)
+            powerDf = pd.read_csv(powerPath, float_precision='round_trip')
+            # sanity check: column names
+            for col in requiredPowerCols:
+                if not col in powerDf.columns:
+                    raise Exception('ERROR: Required column ({}) in powerprofiling.csv file is missing.'.format(col))
 
-        if len(powerDf) > 0:
-            # sanity check node_id data type
-            if not 'int' in str(powerDf.node_id.dtype):
-                raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
+            if len(powerDf) > 0:
+                # sanity check node_id data type
+                if not 'int' in str(powerDf.node_id.dtype):
+                    raise Exception('ERROR: GPIO trace file (gpiotracing.csv) has wrong format!')
 
-            powerAvailable = True
-    elif powerRldFiles:
-        powerDfList = []
-        for powerRldFile in powerRldFiles:
-            sp = os.path.basename(powerRldFile).split('.')
-            obsId = int(sp[1])
-            nodeId = int(sp[2])
-            tempDf = pd.DataFrame()
-            rld = RocketLoggerData(powerRldFile)
-            rld.merge_channels()
-            ts = rld.get_time(time_reference='network')
-            tempDf['timestamp'] = ts.astype(np.timedelta64) / np.timedelta64(1, 's')   # convert numpy.datetime64 timestamps into unix timestamps (numpy.float64 in seconds)
-            # tempDf['timestamp'] = ts.astype('uint64') / 1e9   # convert numpy.datetime64 timestamps into unix timestamps (numpy.float64 in seconds)
-            tempDf['observer_id'] = obsId
-            tempDf['node_id'] = nodeId
-            tempDf['current_mA'] = rld.get_data('I1') * 1e3 # convert to mA
-            tempDf['voltage_V'] = rld.get_data('V2') - rld.get_data('V1') # voltage difference
-            powerDfList.append(tempDf)
+                powerAvailable = True
+        elif powerRldFiles:
+            powerDfList = []
+            for powerRldFile in powerRldFiles:
+                sp = os.path.basename(powerRldFile).split('.')
+                obsId = int(sp[1])
+                nodeId = int(sp[2])
+                tempDf = pd.DataFrame()
+                rld = RocketLoggerData(powerRldFile)
+                rld.merge_channels()
+                ts = rld.get_time(time_reference='network')
+                tempDf['timestamp'] = ts.astype(np.timedelta64) / np.timedelta64(1, 's')   # convert numpy.datetime64 timestamps into unix timestamps (numpy.float64 in seconds)
+                # tempDf['timestamp'] = ts.astype('uint64') / 1e9   # convert numpy.datetime64 timestamps into unix timestamps (numpy.float64 in seconds)
+                tempDf['observer_id'] = obsId
+                tempDf['node_id'] = nodeId
+                tempDf['current_mA'] = rld.get_data('I1') * 1e3 # convert to mA
+                tempDf['voltage_V'] = rld.get_data('V2') - rld.get_data('V1') # voltage difference
+                powerDfList.append(tempDf)
 
-        powerDf = pd.concat(powerDfList)
-        if len(powerDf) > 0:
-            powerAvailable = True
+            powerDf = pd.concat(powerDfList)
+            if len(powerDf) > 0:
+                powerAvailable = True
 
     ## try to read datatrace data
     datatracePath = os.path.join(resultPath, 'datatrace.csv')
